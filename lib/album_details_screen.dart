@@ -23,11 +23,11 @@ class AlbumDetailsScreen extends StatelessWidget {
               //onLinkTap: (url) {
               //  // Gérer le clic sur un lien si nécessaire
               //},
-              style: {
-                'img': Style(
-                  margin: EdgeInsets.symmetric(vertical: 10),
-                ),
-              },
+              //  style: {
+              //    'img': Style(
+              //     margin: EdgeInsets.symmetric(vertical: 10),
+              //  ),
+              // },
             ),
             // Ajoutez d'autres détails de l'album selon votre structure de données
           ],
