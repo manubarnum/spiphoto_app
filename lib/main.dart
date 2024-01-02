@@ -1,6 +1,4 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'album_details_screen.dart';
 
 void main() {
@@ -24,26 +22,6 @@ class PhotoAlbumsScreen extends StatefulWidget {
 
 class _PhotoAlbumsScreenState extends State<PhotoAlbumsScreen> {
   List<Map<String, dynamic>> albums = []; // Explicitement typé
-
-  @override
-  void initState() {
-    super.initState();
-    fetchAlbums();
-  }
-
-  Future<void> fetchAlbums() async {
-    final Uri url = Uri.parse('https://wip.spiphoto.fr/wp-json/wp/v2/posts');
-
-    final response = await http.get(url);
-
-    if (response.statusCode == 200) {
-      setState(() {
-        albums = List<Map<String, dynamic>>.from(json.decode(response.body));
-      });
-    } else {
-      throw Exception('Failed to load albums');
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
