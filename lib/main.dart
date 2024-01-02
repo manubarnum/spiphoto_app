@@ -10,6 +10,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      theme: ThemeData.dark(),
       title: 'WordPress Photo Albums',
       home: PhotoAlbumsScreen(),
     );
@@ -35,7 +36,8 @@ class _PhotoAlbumsScreenState extends State<PhotoAlbumsScreen> {
     //print('Albums dans le widget: $albums');
     return Scaffold(
       appBar: AppBar(
-        title: Text('Albums Photo WordPress'),
+        backgroundColor: Color.fromARGB(255, 1, 55, 13),
+        title: Text('10 derniers Albums Photo WordPress'),
       ),
       body: ListView.builder(
         itemCount: albums.length,
@@ -45,13 +47,14 @@ class _PhotoAlbumsScreenState extends State<PhotoAlbumsScreen> {
           return ListTile(
             title: Text(
               title != null ? title : 'Titre non disponible',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              style: Theme.of(context).textTheme.titleMedium,
             ),
             onTap: () {
               // Naviguer vers la page de détails de l'album
               Navigator.push(
                 context,
                 MaterialPageRoute(
+                  fullscreenDialog: false,
                   builder: (context) => AlbumDetailsScreen(album: album),
                 ),
               );

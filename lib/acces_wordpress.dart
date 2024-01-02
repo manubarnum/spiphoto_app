@@ -30,18 +30,39 @@ Future<void> fetchAlbums() async {
   }
 }
 
-Future<List<String>> extractImagesFromHtml(String htmlString) async {
-  List<String> imageUrls = [];
+class ImageWpInfo {
+  String portraitUrl;
+  String landscapeUrl;
+
+  ImageWpInfo({required this.portraitUrl, required this.landscapeUrl});
+}
+
+Future<List<ImageWpInfo>> extractImagesFromHtml(String htmlString) async {
+  List<ImageWpInfo> imageInfos = [];
 
   var document = parse(htmlString);
   var elements = document.getElementsByTagName('img');
 
   for (var element in elements) {
-    var imageUrl = element.attributes['src'];
-    if (imageUrl != null && imageUrl.isNotEmpty) {
-      imageUrls.add(imageUrl);
+    var portraitUrl = element.attributes['src'];
+    var landscapeUrl = "";
+
+    // Recherche de l'ancêtre <a>
+    var anchorElement = element.parent;
+    while (anchorElement != null && anchorElement.localName != 'a') {
+      anchorElement = anchorElement.parent;
     }
+
+    if (anchorElement != null) {
+      // Si une balise <a> est trouvée, récupérer son attribut href
+      landscapeUrl = anchorElement.attributes['href'] ?? "";
+    }
+
+    imageInfos.add(ImageWpInfo(
+      portraitUrl: portraitUrl ?? "",
+      landscapeUrl: landscapeUrl,
+    ));
   }
 
-  return Future.value(imageUrls);
+  return Future.value(imageInfos);
 }
