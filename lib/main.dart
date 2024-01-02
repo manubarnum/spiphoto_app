@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'album_details_screen.dart';
+import 'acces_wordpress.dart'; // Importer le fichier avec les fonctions
 
 void main() {
   runApp(MyApp());
@@ -21,10 +22,17 @@ class PhotoAlbumsScreen extends StatefulWidget {
 }
 
 class _PhotoAlbumsScreenState extends State<PhotoAlbumsScreen> {
-  List<Map<String, dynamic>> albums = []; // Explicitement typé
+  //List<Map<String, dynamic>> albums = [];
+
+  @override
+  void initState() {
+    super.initState();
+    fetchAlbums(); // Utilisez la fonction fetchAlbums depuis le fichier acces_wordpress.dart
+  }
 
   @override
   Widget build(BuildContext context) {
+    //print('Albums dans le widget: $albums');
     return Scaffold(
       appBar: AppBar(
         title: Text('Albums Photo WordPress'),
@@ -33,9 +41,10 @@ class _PhotoAlbumsScreenState extends State<PhotoAlbumsScreen> {
         itemCount: albums.length,
         itemBuilder: (context, index) {
           final album = albums[index];
+          final title = album['title']['rendered'];
           return ListTile(
             title: Text(
-              album['title']['rendered'],
+              title != null ? title : 'Titre non disponible',
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
             onTap: () {
