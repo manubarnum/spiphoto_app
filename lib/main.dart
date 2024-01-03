@@ -46,8 +46,8 @@ class _PhotoAlbumsScreenState extends State<PhotoAlbumsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    print('Build called');
-    print('Albums dans le widget: $albums');
+    //print('Build called');
+    //print('Albums dans le widget: $albums');
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Color.fromARGB(255, 1, 55, 13),

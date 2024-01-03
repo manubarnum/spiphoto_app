@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'acces_wordpress.dart';
+//import 'package:flutter/gestures.dart';
 
 class AlbumDetailsScreen extends StatelessWidget {
   final Map<String, dynamic> album;
