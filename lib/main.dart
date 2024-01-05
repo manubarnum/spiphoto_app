@@ -44,14 +44,32 @@ class _PhotoAlbumsScreenState extends State<PhotoAlbumsScreen> {
     }
   }
 
+   Future<void> _reload() async {
+    try {
+      await _loadAlbums();
+      setState(() {
+        // Mettre à jour l'état si nécessaire
+      });
+    } catch (e) {
+      print('Erreur lors du rechargement des albums: $e');
+      // Gérer les erreurs si nécessaire
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     //print('Build called');
     //print('Albums dans le widget: $albums');
     return Scaffold(
-      appBar: AppBar(
+       appBar: AppBar(
         backgroundColor: Color.fromARGB(255, 1, 55, 13),
-        title: Text('SPIPHOTO, Pays de Bray'),
+        title: Text('SPIPHOTO'),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.refresh),
+            onPressed: _reload,
+          ),
+        ],
       ),
       body: Column(
         children: [
