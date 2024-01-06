@@ -24,36 +24,47 @@ class PhotoAlbumsScreen extends StatefulWidget {
 }
 
 class _PhotoAlbumsScreenState extends State<PhotoAlbumsScreen> {
+  bool _loading = false;
+
   @override
   void initState() {
     super.initState();
-    if (mounted) {
-      _loadAlbums(); // Utilisez la fonction pour charger les albums
-    }
+    _init();
+  }
+
+  Future<void> _init() async {
+    await _loadAlbums();
   }
 
   Future<void> _loadAlbums() async {
+    if (_loading) {
+      return; // Si le chargement est déjà en cours, ne pas le relancer
+    }
+
     try {
-      await fetchAlbums(); // Utilisez la fonction fetchAlbums depuis le fichier acces_wordpress.dart
       setState(() {
-        // Appeler setState si nécessaire
+        _loading = true; // Marquer le début du chargement
+        print('setState Boucle 1');
       });
+
+      await fetchAlbums();
     } catch (e) {
       print('Erreur lors du chargement des albums: $e');
       // Gérer les erreurs si nécessaire
+    } finally {
+      if (mounted) {
+        // Vérifier si le widget est toujours monté avant d'appeler setState
+        setState(() {
+          print('setState Boucle 2');
+          _loading =
+              false; // Marquer la fin du chargement, que ce soit réussi ou non
+        });
+      }
     }
   }
 
-   Future<void> _reload() async {
-    try {
-      await _loadAlbums();
-      setState(() {
-        // Mettre à jour l'état si nécessaire
-      });
-    } catch (e) {
-      print('Erreur lors du rechargement des albums: $e');
-      // Gérer les erreurs si nécessaire
-    }
+  Future<void> _reload() async {
+    await _loadAlbums();
   }
 
   @override
@@ -61,7 +72,7 @@ class _PhotoAlbumsScreenState extends State<PhotoAlbumsScreen> {
     //print('Build called');
     //print('Albums dans le widget: $albums');
     return Scaffold(
-       appBar: AppBar(
+      appBar: AppBar(
         backgroundColor: Color.fromARGB(255, 1, 55, 13),
         title: Text('SPIPHOTO'),
         actions: [
@@ -74,28 +85,50 @@ class _PhotoAlbumsScreenState extends State<PhotoAlbumsScreen> {
       body: Column(
         children: [
           Expanded(
-            child: ListView.builder(
-              itemCount: albums.length,
-              itemBuilder: (context, index) {
-                final album = albums[index];
-                final title = album['title']['rendered'];
-                return ListTile(
-                  title: Text(
-                    title != null ? title : 'Titre non disponible',
-                    style: Theme.of(context).textTheme.titleMedium,
+            child: _loading
+                ? Center(
+                    child: CircularProgressIndicator(),
+                  )
+                : ListView.builder(
+                    itemCount: albums.length,
+                    itemBuilder: (context, index) {
+                      final album = albums[index];
+                      final title = album['title']['rendered'];
+                      return Card(
+                        elevation: 5,
+                        margin:
+                            EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                        child: InkWell(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                fullscreenDialog: false,
+                                builder: (context) =>
+                                    AlbumDetailsScreen(album: album),
+                              ),
+                            );
+                          },
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  title != null
+                                      ? title
+                                      : 'Titre non disponible',
+                                  style:
+                                      Theme.of(context).textTheme.titleMedium,
+                                ),
+                                // Add additional information or widgets if needed
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    },
                   ),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        fullscreenDialog: false,
-                        builder: (context) => AlbumDetailsScreen(album: album),
-                      ),
-                    );
-                  },
-                );
-              },
-            ),
           ),
           BottomAppBar(
             color: Color.fromARGB(255, 1, 55, 13),
