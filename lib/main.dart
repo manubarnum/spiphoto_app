@@ -93,7 +93,10 @@ class _PhotoAlbumsScreenState extends State<PhotoAlbumsScreen> {
                     itemCount: albums.length,
                     itemBuilder: (context, index) {
                       final album = albums[index];
-                      final title = album['title']['rendered'];
+                      final title = album['title'];
+                      //final content = album['content'];
+                      // Ajoutez d'autres champs au besoin
+
                       return Card(
                         elevation: 5,
                         margin:
@@ -104,8 +107,13 @@ class _PhotoAlbumsScreenState extends State<PhotoAlbumsScreen> {
                               context,
                               MaterialPageRoute(
                                 fullscreenDialog: false,
-                                builder: (context) =>
-                                    AlbumDetailsScreen(album: album),
+                                builder: (context) => AlbumDetailsScreen(
+                                  album: album,
+                                  //id: album['id'],
+                                  //title: title,
+                                  //content: content,
+                                  // Passez d'autres champs si nécessaire
+                                ),
                               ),
                             );
                           },
@@ -142,10 +150,10 @@ class _PhotoAlbumsScreenState extends State<PhotoAlbumsScreen> {
                   },
                   child: Text(
                     'Retrouvez d\'autres albums sur notre site',
-                    style: TextStyle(
-                      color: Colors.white,
-                      decoration: TextDecoration.underline,
-                    ),
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          color: Colors.white,
+                          decoration: TextDecoration.underline,
+                        ),
                   ),
                 ),
               ),

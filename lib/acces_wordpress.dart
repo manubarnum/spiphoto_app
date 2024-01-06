@@ -11,7 +11,17 @@ Future<void> fetchAlbums() async {
   final response = await http.get(url);
 
   if (response.statusCode == 200) {
-    albums = List<Map<String, dynamic>>.from(json.decode(response.body));
+    final List<dynamic> decodedData = json.decode(response.body);
+    albums = decodedData.map((album) {
+      return {
+        //'id': album['id'],
+        'title': album['title']['rendered'],
+        'content': album['content']['rendered'],
+        // Ajoutez d'autres champs au besoin
+      };
+    }).toList();
+
+    print('Albums chargés');
   } else {
     print('Failed to load albums. Status code: ${response.statusCode}');
     print('Response body: ${response.body}');
