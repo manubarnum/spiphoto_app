@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'acces_wordpress.dart';
 
 class AlbumDetailsScreen extends StatelessWidget {
-  final Map<String, dynamic> album;
+  final Album album;
 
   AlbumDetailsScreen({required this.album});
 
@@ -14,7 +14,7 @@ class AlbumDetailsScreen extends StatelessWidget {
         backgroundColor: const Color.fromARGB(255, 1, 55, 13),
         centerTitle: true,
         title: Text(
-          album['title'],
+          album.title,
           style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
       ),
@@ -26,7 +26,7 @@ class AlbumDetailsScreen extends StatelessWidget {
             child: Column(
               children: [
                 FutureBuilder<List<ImageWpInfo>>(
-                  future: extractImagesFromHtml(album['content']),
+                  future: extractImagesFromHtml(album.content['rendered']),
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
                       return CircularProgressIndicator();

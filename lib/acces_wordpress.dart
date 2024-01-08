@@ -6,25 +6,37 @@ import 'package:html/parser.dart' show parse;
 
 List<Map<String, dynamic>> albums = []; // Explicitement typé
 
-Future<void> fetchAlbums() async {
-  final Uri url = Uri.parse('https://wip.spiphoto.fr/wp-json/wp/v2/posts');
-  final response = await http.get(url);
+class Album {
+  final Map<String, dynamic> content;
+  final int id;
+  final String title;
+
+  Album({
+    required this.content,
+    required this.id,
+    required this.title,
+  });
+
+  factory Album.fromJson(Map<String, dynamic> json) {
+    return Album(
+      content: json['content'] ?? {}, // Assuming content is a Map
+      id: json['id'] is int ? json['id'] : 0,
+      title:
+          json['title']['rendered'] is String ? json['title']['rendered'] : '',
+    );
+  }
+}
+
+Future<List<Album>> fetchAlbums() async {
+  final response =
+      await http.get(Uri.parse('https://wip.spiphoto.fr/wp-json/wp/v2/posts'));
 
   if (response.statusCode == 200) {
-    final List<dynamic> decodedData = json.decode(response.body);
-    albums = decodedData.map((album) {
-      return {
-        //'id': album['id'],
-        'title': album['title']['rendered'],
-        'content': album['content']['rendered'],
-        // Ajoutez d'autres champs au besoin
-      };
-    }).toList();
-
-    print('Albums chargés');
+    final List<dynamic> jsonList = jsonDecode(response.body);
+    final List<Album> albums =
+        jsonList.map((json) => Album.fromJson(json)).toList();
+    return albums;
   } else {
-    print('Failed to load albums. Status code: ${response.statusCode}');
-    print('Response body: ${response.body}');
     throw Exception('Failed to load albums');
   }
 }
