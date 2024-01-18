@@ -10,9 +10,10 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  http: ^1.1.2
+  http: ^1.2.0
   html: ^0.15.4
   url_launcher: ^6.2.2
+  
   
 # Dépendances spécifiques dave
 dev_dependencies:
@@ -35,3 +36,4 @@ flutter:
     - android/app/src/main/res/mipmap-xhdpi/ic_launcher.png
     - android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
     - android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+    

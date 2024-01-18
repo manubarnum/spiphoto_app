@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'acces_wordpress.dart';
+import '../acces_wordpress.dart';
 
 class AlbumDetailsScreen extends StatelessWidget {
   final Album album;

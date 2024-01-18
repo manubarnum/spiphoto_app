@@ -29,7 +29,7 @@ class Album {
 
 Future<List<Album>> fetchAlbums() async {
   final response =
-      await http.get(Uri.parse('https://wip.spiphoto.fr/wp-json/wp/v2/posts'));
+      await http.get(Uri.parse('https://www.spiphoto.fr/wp-json/wp/v2/posts'));
 
   if (response.statusCode == 200) {
     final List<dynamic> jsonList = jsonDecode(response.body);
@@ -37,7 +37,7 @@ Future<List<Album>> fetchAlbums() async {
         jsonList.map((json) => Album.fromJson(json)).toList();
     return albums;
   } else {
-    throw Exception('Failed to load albums');
+    throw Exception('Failed to load albums, zut!');
   }
 }
 

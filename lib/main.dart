@@ -1,9 +1,23 @@
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'acces_wordpress.dart';
-import 'album_details_screen.dart';
+import 'interface/album_details_screen.dart';
+import 'interface/bottom_appli.dart';
+//import 'dart:io';
 
-void main() => runApp(const MyApp());
+/* class MyHttpOverrides extends HttpOverrides {
+  @override
+  HttpClient createHttpClient(SecurityContext? context) {
+    return super.createHttpClient(context)
+      ..badCertificateCallback =
+          (X509Certificate cert, String host, int port) => true;
+  }
+}
+
+void main() {
+  HttpOverrides.global = MyHttpOverrides();
+  //HttpClient()..badCertificateCallback = (cert, host, port) => true;
+  runApp(MyApp());
+} */
 
 class MyApp extends StatefulWidget {
   const MyApp({Key? key}) : super(key: key);
@@ -37,65 +51,42 @@ class _MyAppState extends State<MyApp> {
             builder: (context, snapshot) {
               if (snapshot.hasData) {
                 final List<Album> albums = snapshot.data!;
-                return Column(
-                  children: [
-                    Expanded(
-                      child: ListView.builder(
-                        itemCount: albums.length,
-                        itemBuilder: (context, index) {
-                          return Card(
-                            elevation: 5,
-                            margin: EdgeInsets.all(10),
-                            child: Column(
-                              children: [
-                                ListTile(
-                                  title: Text(
-                                    albums[index].title,
-                                    style:
-                                        Theme.of(context).textTheme.titleMedium,
-                                  ),
-                                  onTap: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        fullscreenDialog: false,
-                                        builder: (context) =>
-                                            AlbumDetailsScreen(
-                                                album: albums[index]),
-                                      ),
-                                    );
-                                  },
+                return Column(children: [
+                  Expanded(
+                    child: ListView.builder(
+                      itemCount: albums.length,
+                      itemBuilder: (context, index) {
+                        return Card(
+                          elevation: 5,
+                          margin: EdgeInsets.all(10),
+                          child: Column(
+                            children: [
+                              ListTile(
+                                title: Text(
+                                  albums[index].title,
+                                  style:
+                                      Theme.of(context).textTheme.titleMedium,
                                 ),
-                                // Ajoutez d'autres widgets ici si nécessaire
-                              ],
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                    BottomAppBar(
-                      color: Color.fromARGB(255, 1, 55, 13),
-                      child: Container(
-                        height: 50.0,
-                        child: Center(
-                          child: GestureDetector(
-                            onTap: () {
-                              Uri url = Uri.parse('https://wip.spiphoto.fr/');
-                              launchUrl(url);
-                            },
-                            child: Text(
-                              'Retrouvez d\'autres albums sur notre site',
-                              style: TextStyle(
-                                color: Colors.white,
-                                decoration: TextDecoration.underline,
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      fullscreenDialog: false,
+                                      builder: (context) => AlbumDetailsScreen(
+                                          album: albums[index]),
+                                    ),
+                                  );
+                                },
                               ),
-                            ),
+                              // Ajoutez d'autres widgets ici si nécessaire
+                            ],
                           ),
-                        ),
-                      ),
+                        );
+                      },
                     ),
-                  ],
-                );
+                  ),
+                  BottomAppli()
+                ]);
               } else if (snapshot.hasError) {
                 return Text('Error: ${snapshot.error}');
               }
