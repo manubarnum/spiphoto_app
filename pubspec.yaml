@@ -25,7 +25,7 @@ flutter_launcher_icons: ^0.13.1
 flutter_icons:
   android: "launcher_icon"
   ios: true
-  image_path: "asset/icons/mon_logo1.png"
+  image_path: "assets/icons/mon_logo1.png"
 
 # Paramètres spécifiques à l'application
 flutter:
@@ -34,6 +34,7 @@ flutter:
     - android/app/src/main/res/mipmap-hdpi/ic_launcher.png
     - android/app/src/main/res/mipmap-mdpi/ic_launcher.png
     - android/app/src/main/res/mipmap-xhdpi/ic_launcher.png
+    - android/app/src/main/res/mipmap-xhdpi/rounded_launcher.png
     - android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
     - android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
-    
+    - assets/icons/mon_logo1.png

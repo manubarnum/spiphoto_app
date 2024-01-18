@@ -15,6 +15,8 @@ class MyApp extends StatelessWidget {
       home: Scaffold(
         appBar: AppBar(
           backgroundColor: Color.fromARGB(255, 1, 55, 13),
+          leading: Image.asset(
+              'android/app/src/main/res/mipmap-xhdpi/rounded_launcher.png'),
           title: Text('SPIPHOTO, l\'application'),
         ),
         body: MyList(),

@@ -10,7 +10,7 @@ class AlbumDetailsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        iconTheme: IconThemeData(color: Color.fromARGB(255, 101, 2, 151)),
+        iconTheme: IconThemeData(color: Color.fromARGB(255, 23, 0, 34)),
         backgroundColor: const Color.fromARGB(255, 1, 55, 13),
         centerTitle: true,
         title: Text(
@@ -76,7 +76,7 @@ class AlbumDetailsScreen extends StatelessWidget {
 
   Widget buildPageView(List<ImageWpInfo> imageInfos) {
     return Container(
-      height: 400.0, // Ajustez la hauteur selon vos besoins
+      height: 350.0, // Ajustez la hauteur selon vos besoins
       child: PageView.builder(
         itemCount: imageInfos.length,
         itemBuilder: (context, index) {
