@@ -66,9 +66,13 @@ class AlbumDetailsScreen extends StatelessWidget {
       ),
       itemCount: imageInfos.length,
       itemBuilder: (context, index) {
-        return Image.network(
-          imageInfos[index].portraitUrl,
-          fit: BoxFit.cover,
+        return Column(
+          children: [
+            Image.network(
+              imageInfos[index].portraitUrl,
+              fit: BoxFit.cover,
+            ),
+          ],
         );
       },
     );

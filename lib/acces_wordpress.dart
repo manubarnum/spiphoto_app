@@ -44,8 +44,13 @@ Future<List<Album>> fetchAlbums() async {
 class ImageWpInfo {
   String portraitUrl;
   String landscapeUrl;
+  String description; // Nouveau champ pour la description
 
-  ImageWpInfo({required this.portraitUrl, required this.landscapeUrl});
+  ImageWpInfo({
+    required this.portraitUrl,
+    required this.landscapeUrl,
+    required this.description,
+  });
 }
 
 Future<List<ImageWpInfo>> extractImagesFromHtml(String htmlString) async {
@@ -70,9 +75,13 @@ Future<List<ImageWpInfo>> extractImagesFromHtml(String htmlString) async {
         landscapeUrl = anchorElement.attributes['href'] ?? "";
       }
 
+      // Nouvelle ligne pour extraire la description du texte alternatif (alt)
+      var description = element.attributes['title'] ?? "";
+
       imageInfos.add(ImageWpInfo(
         portraitUrl: portraitUrl ?? "",
         landscapeUrl: landscapeUrl,
+        description: description,
       ));
     }
   } catch (e) {
@@ -80,5 +89,8 @@ Future<List<ImageWpInfo>> extractImagesFromHtml(String htmlString) async {
     return [];
   }
 
-  return imageInfos;
+  // Filtrez les images dès le début
+  return imageInfos
+      .where((info) => info.description.toLowerCase() == 'favori')
+      .toList();
 }
