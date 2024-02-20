@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:html/parser.dart' show parse;
+import 'image_wp_info.dart';
 
 // Appel de la fonction fetchAlbums lors de l'initialisation du widget
 
@@ -9,14 +10,16 @@ List<Map<String, dynamic>> albums = []; // Explicitement typé
 class Album {
   final Map<String, dynamic> content;
   final int id;
-  final String title;
+  String title;
 
   Album({
     required this.content,
     required this.id,
     required this.title,
-  });
-
+  }) {
+    // Remplacer les occurrences de '&rsquo;' par '\u2019' dans le titre
+    title = title.replaceAll('&rsquo;', '\u2019');
+  }
   factory Album.fromJson(Map<String, dynamic> json) {
     return Album(
       content: json['content'] ?? {}, // Assuming content is a Map
@@ -39,18 +42,6 @@ Future<List<Album>> fetchAlbums() async {
   } else {
     throw Exception('Failed to load albums, zut!');
   }
-}
-
-class ImageWpInfo {
-  String portraitUrl;
-  String landscapeUrl;
-  String description; // Nouveau champ pour la description
-
-  ImageWpInfo({
-    required this.portraitUrl,
-    required this.landscapeUrl,
-    required this.description,
-  });
 }
 
 Future<List<ImageWpInfo>> extractImagesFromHtml(String htmlString) async {
@@ -78,11 +69,13 @@ Future<List<ImageWpInfo>> extractImagesFromHtml(String htmlString) async {
       // Nouvelle ligne pour extraire la description du texte alternatif (alt)
       var description = element.attributes['title'] ?? "";
 
-      imageInfos.add(ImageWpInfo(
-        portraitUrl: portraitUrl ?? "",
-        landscapeUrl: landscapeUrl,
-        description: description,
-      ));
+      imageInfos.add(
+        ImageWpInfo(
+          portraitUrl: portraitUrl ?? "",
+          landscapeUrl: landscapeUrl,
+          description: description,
+        ),
+      );
     }
   } catch (e) {
     print('Erreur de parsing HTML: $e');
@@ -91,6 +84,6 @@ Future<List<ImageWpInfo>> extractImagesFromHtml(String htmlString) async {
 
   // Filtrez les images dès le début
   return imageInfos
-      .where((info) => info.description.toLowerCase() == 'favori')
+      //.where((info) => info.description.toLowerCase() == 'favori')
       .toList();
 }
