@@ -19,7 +19,7 @@ Widget buildGridView(BuildContext context, List<ImageWpInfo> imageInfos) {
       return GestureDetector(
         onTap: () {
           // Gérer l'appui sur une photo ici (affichage en mode page)
-          print('Appui sur la photo $index');
+          //print('Appui sur la photo $index');
           // Ajoutez votre logique d'affichage en mode page ici, par exemple :
           Navigator.push(
             context,
@@ -29,10 +29,18 @@ Widget buildGridView(BuildContext context, List<ImageWpInfo> imageInfos) {
           );
         },
         child: Container(
+          /* margin: EdgeInsets.all(16.0),
+          constraints: BoxConstraints(
+            minHeight: 100,
+            //maxHeight: 200,
+            minWidth: 100,
+            //maxWidth: 200,
+          ), */
           decoration: BoxDecoration(
             border: Border.all(
-              color: Colors.black, // Couleur de la bordure
-              width: 2.0, // Épaisseur de la bordure
+              color:
+                  Color.fromARGB(255, 255, 255, 255), // Couleur de la bordure
+              width: 3.0, // Épaisseur de la bordure
             ),
             borderRadius:
                 BorderRadius.circular(10.0), // Rayon des coins du Container
