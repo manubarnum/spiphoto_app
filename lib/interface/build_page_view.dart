@@ -1,11 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../image_wp_info.dart';
+
+void setWallpaper(String imagePath) async {
+  const platform = const MethodChannel('wallpaper_setter');
+  try {
+    await platform.invokeMethod('setWallpaper', {'path': imagePath});
+  } on PlatformException catch (e) {
+    print("Failed to set wallpaper: '${e.message}'.");
+  }
+}
 
 Widget buildPageView(
     BuildContext context, List<ImageWpInfo> imageInfos, int initialIndex) {
   PageController pageController = PageController(
     initialPage: initialIndex,
-    //viewportFraction: 1.0, // Ajustez la sensibilité du swipe ici
   );
 
   return Scaffold(
@@ -18,11 +27,10 @@ Widget buildPageView(
             itemCount: imageInfos.length,
             itemBuilder: (context, index) {
               return GestureDetector(
-                /* onTap: () {
-                  // Ne rien faire lors du tap sur l'image
-                }, */
+                onLongPress: () {
+                  setWallpaper(imageInfos[index].landscapeUrl); // Définit l'image comme fond d'écran lors d'un appui long
+                },
                 onHorizontalDragUpdate: (details) {
-                  // Ne permet le swipe que si l'utilisateur swipe depuis la bordure de l'écran
                   if (details.primaryDelta! < 0 &&
                       details.globalPosition.dx < 50) {
                     pageController.nextPage(
@@ -52,12 +60,11 @@ Widget buildPageView(
                     borderRadius: BorderRadius.circular(10.0),
                   ),
                   child: InteractiveViewer(
-                    boundaryMargin: EdgeInsets.all(
-                        20.0), // Ajustez la marge pour une réactivité accrue
+                    boundaryMargin: EdgeInsets.all(20.0),
                     minScale: 0.1,
                     maxScale: 3.0,
-                    panEnabled: true, // Permet le déplacement
-                    scaleEnabled: true, // Permet le zoom
+                    panEnabled: true,
+                    scaleEnabled: true,
                     child: Image.network(
                       imageInfos[index].landscapeUrl,
                       fit: BoxFit.contain,
@@ -74,7 +81,7 @@ Widget buildPageView(
           child: IconButton(
             icon: Icon(Icons.arrow_back, color: Colors.white),
             onPressed: () {
-              Navigator.pop(context); // Retourne à l'écran précédent
+              Navigator.pop(context);
             },
           ),
         ),
