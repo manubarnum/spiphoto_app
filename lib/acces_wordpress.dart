@@ -31,8 +31,8 @@ class Album {
 }
 
 Future<List<Album>> fetchAlbums() async {
-  final response =
-      await http.get(Uri.parse('https://www.spiphoto.fr/wp-json/wp/v2/posts'));
+  final response = await http.get(
+      Uri.parse('https://28b2-72884a86cc5e.wptiger.fr/wp-json/wp/v2/posts'));
 
   if (response.statusCode == 200) {
     final List<dynamic> jsonList = jsonDecode(response.body);
@@ -53,22 +53,19 @@ Future<List<ImageWpInfo>> extractImagesFromHtml(String htmlString) async {
 
     for (var element in elements) {
       var portraitUrl = element.attributes['src'];
-      var landscapeUrl = "";
+      String landscapeUrl = "";
 
-      // Recherche de l'ancêtre <a>
-      var anchorElement = element.parent;
-      while (anchorElement != null && anchorElement.localName != 'a') {
-        anchorElement = anchorElement.parent;
+      if (portraitUrl != null && portraitUrl.contains('-150x150')) {
+        // Supprimer la partie '-150x150' pour obtenir l'URL complète
+        landscapeUrl = portraitUrl.replaceAll('-150x150', '');
+      } else {
+        landscapeUrl = portraitUrl ?? ""; // Si aucune modification nécessaire
       }
 
-      if (anchorElement != null) {
-        // Si une balise <a> est trouvée, récupérer son attribut href
-        landscapeUrl = anchorElement.attributes['href'] ?? "";
-      }
-
-      // Nouvelle ligne pour extraire la description du texte alternatif (alt)
+      // Extraire la description du texte alternatif (title)
       var description = element.attributes['title'] ?? "";
 
+      // Ajouter les informations de l'image à la liste
       imageInfos.add(
         ImageWpInfo(
           portraitUrl: portraitUrl ?? "",
@@ -82,8 +79,5 @@ Future<List<ImageWpInfo>> extractImagesFromHtml(String htmlString) async {
     return [];
   }
 
-  // Filtrez les images dès le début
-  return imageInfos
-      //.where((info) => info.description.toLowerCase() == 'favori')
-      .toList();
+  return imageInfos;
 }

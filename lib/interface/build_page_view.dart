@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import '../image_wp_info.dart';
+import 'package:extended_image/extended_image.dart';
 
 Widget buildPageView(
     BuildContext context, List<ImageWpInfo> imageInfos, int initialIndex) {
   PageController pageController = PageController(
     initialPage: initialIndex,
-    //viewportFraction: 1.0, // Ajustez la sensibilité du swipe ici
   );
 
   return Scaffold(
@@ -17,53 +17,48 @@ Widget buildPageView(
             controller: pageController,
             itemCount: imageInfos.length,
             itemBuilder: (context, index) {
-              return GestureDetector(
-                /* onTap: () {
-                  // Ne rien faire lors du tap sur l'image
-                }, */
-                onHorizontalDragUpdate: (details) {
-                  // Ne permet le swipe que si l'utilisateur swipe depuis la bordure de l'écran
-                  if (details.primaryDelta! < 0 &&
-                      details.globalPosition.dx < 50) {
-                    pageController.nextPage(
-                      duration: Duration(milliseconds: 300),
-                      curve: Curves.easeOut,
-                    );
-                  } else if (details.primaryDelta! > 0 &&
-                      details.globalPosition.dx >
-                          MediaQuery.of(context).size.width - 50) {
-                    pageController.previousPage(
-                      duration: Duration(milliseconds: 300),
-                      curve: Curves.easeOut,
-                    );
-                  }
-                },
-                child: Container(
-                  margin: EdgeInsets.all(16.0),
-                  constraints: BoxConstraints(
-                    minHeight: 100,
-                    minWidth: 100,
-                  ),
-                  decoration: BoxDecoration(
-                    border: Border.all(
-                      color: Color.fromARGB(255, 255, 255, 255),
-                      width: 5.0,
+              return Column(
+                children: [
+                  Container(
+                    margin: EdgeInsets.all(16.0),
+                    constraints: BoxConstraints(
+                      minHeight: 100,
+                      minWidth: 100,
                     ),
-                    borderRadius: BorderRadius.circular(10.0),
-                  ),
-                  child: InteractiveViewer(
-                    boundaryMargin: EdgeInsets.all(
-                        20.0), // Ajustez la marge pour une réactivité accrue
-                    minScale: 0.1,
-                    maxScale: 3.0,
-                    panEnabled: true, // Permet le déplacement
-                    scaleEnabled: true, // Permet le zoom
-                    child: Image.network(
+                    decoration: BoxDecoration(
+                      border: Border.all(
+                        color: Color.fromARGB(255, 255, 255, 255),
+                        width: 5.0,
+                      ),
+                      borderRadius: BorderRadius.circular(10.0),
+                    ),
+                    child: ExtendedImage.network(
                       imageInfos[index].landscapeUrl,
                       fit: BoxFit.contain,
+                      enableSlideOutPage: true,
+                      mode: ExtendedImageMode.gesture,
+                      initGestureConfigHandler: (state) => GestureConfig(
+                        minScale: 1.0,
+                        animationMinScale: 0.8,
+                        maxScale: 3.0,
+                        animationMaxScale: 3.5,
+                        speed: 1.0,
+                        inertialSpeed: 100.0,
+                        initialScale: 1.0,
+                        inPageView: false,
+                      ),
                     ),
                   ),
-                ),
+                  // Ajouter l'adresse de l'image en dessous de chaque photo
+                  /* Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Text(
+                      imageInfos[index].landscapeUrl,
+                      style: TextStyle(color: Colors.white, fontSize: 14.0),
+                      textAlign: TextAlign.center,
+                    ),
+                  ), */
+                ],
               );
             },
           ),

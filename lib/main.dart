@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'interface/bottom_appli.dart';
+import '/interface/bottom_appli.dart';
 import '/interface/album_list.dart';
 import '/interface/appbar_accueil.dart';
 

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import '../acces_wordpress.dart';
-import '../image_wp_info.dart';
-import 'build_grid_view.dart';
+import 'package:spiphoto_app/acces_wordpress.dart';
+import 'package:spiphoto_app/image_wp_info.dart';
+import 'package:spiphoto_app/interface/build_grid_view.dart';
 
 class AlbumDetailsScreen extends StatelessWidget {
   final Album album;

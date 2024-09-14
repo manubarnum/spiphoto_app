@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../acces_wordpress.dart';
-import 'album_details_screen.dart';
+import 'package:spiphoto_app/acces_wordpress.dart';
+import 'package:spiphoto_app/interface/album_details_screen.dart';
 
 class MyList extends StatefulWidget {
   const MyList({Key? key}) : super(key: key);

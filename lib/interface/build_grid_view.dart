@@ -18,9 +18,6 @@ Widget buildGridView(BuildContext context, List<ImageWpInfo> imageInfos) {
     itemBuilder: (context, index) {
       return GestureDetector(
         onTap: () {
-          // Gérer l'appui sur une photo ici (affichage en mode page)
-          //print('Appui sur la photo $index');
-          // Ajoutez votre logique d'affichage en mode page ici, par exemple :
           Navigator.push(
             context,
             MaterialPageRoute(
@@ -28,31 +25,37 @@ Widget buildGridView(BuildContext context, List<ImageWpInfo> imageInfos) {
             ),
           );
         },
-        child: Container(
-          /* margin: EdgeInsets.all(16.0),
-          constraints: BoxConstraints(
-            minHeight: 100,
-            //maxHeight: 200,
-            minWidth: 100,
-            //maxWidth: 200,
-          ), */
-          decoration: BoxDecoration(
-            border: Border.all(
-              color:
-                  Color.fromARGB(255, 255, 255, 255), // Couleur de la bordure
-              width: 3.0, // Épaisseur de la bordure
+        child: Column(
+          children: [
+            Container(
+              decoration: BoxDecoration(
+                border: Border.all(
+                  color: Color.fromARGB(
+                      255, 255, 255, 255), // Couleur de la bordure
+                  width: 3.0, // Épaisseur de la bordure
+                ),
+                borderRadius:
+                    BorderRadius.circular(10.0), // Rayon des coins du Container
+              ),
+              child: ClipRRect(
+                borderRadius:
+                    BorderRadius.circular(8.0), // Rayon des coins de l'image
+                child: Image.network(
+                  imageInfos[index].portraitUrl,
+                  fit: BoxFit.cover,
+                ),
+              ),
             ),
-            borderRadius:
-                BorderRadius.circular(10.0), // Rayon des coins du Container
-          ),
-          child: ClipRRect(
-            borderRadius:
-                BorderRadius.circular(8.0), // Rayon des coins de l'image
-            child: Image.network(
-              imageInfos[index].portraitUrl,
-              fit: BoxFit.cover,
-            ),
-          ),
+            // Ajouter l'adresse de l'image en dessous
+            /* Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Text(
+                imageInfos[index].portraitUrl, // Afficher l'URL de l'image
+                style: TextStyle(color: Colors.white, fontSize: 12.0),
+                textAlign: TextAlign.center,
+              ),
+            ), */
+          ],
         ),
       );
     },
