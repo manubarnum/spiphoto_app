@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../image_wp_info.dart';
-import 'build_page_view.dart';
+import 'package:spiphoto_app/service/image_wp_info.dart';
+import 'package:spiphoto_app/interface/build_page_view.dart';
 
 Widget buildGridView(BuildContext context, List<ImageWpInfo> imageInfos) {
   return GridView.builder(
@@ -10,8 +10,8 @@ Widget buildGridView(BuildContext context, List<ImageWpInfo> imageInfos) {
     gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
       crossAxisCount:
           (MediaQuery.of(context).orientation == Orientation.portrait) ? 2 : 4,
-      crossAxisSpacing: 15.0,
-      mainAxisSpacing: 15.0,
+      crossAxisSpacing: 13.0,
+      mainAxisSpacing: 13.0,
       childAspectRatio: 1.3,
     ),
     itemCount: imageInfos.length,
@@ -32,7 +32,7 @@ Widget buildGridView(BuildContext context, List<ImageWpInfo> imageInfos) {
                 border: Border.all(
                   color: Color.fromARGB(
                       255, 255, 255, 255), // Couleur de la bordure
-                  width: 3.0, // Épaisseur de la bordure
+                  width: 2.0, // Épaisseur de la bordure
                 ),
                 borderRadius:
                     BorderRadius.circular(10.0), // Rayon des coins du Container
@@ -46,15 +46,6 @@ Widget buildGridView(BuildContext context, List<ImageWpInfo> imageInfos) {
                 ),
               ),
             ),
-            // Ajouter l'adresse de l'image en dessous
-            /* Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Text(
-                imageInfos[index].portraitUrl, // Afficher l'URL de l'image
-                style: TextStyle(color: Colors.white, fontSize: 12.0),
-                textAlign: TextAlign.center,
-              ),
-            ), */
           ],
         ),
       );

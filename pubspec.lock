@@ -69,10 +69,10 @@ packages:
     dependency: "direct main"
     description:
       name: extended_image
-      sha256: c7b628bdbeb398bdd824cfc9d521f18e04b63ad2af811d182e885d3ae4ef45de
+      sha256: "75235b2cf90de7663640c2da43b0549fc1f373340b7ee925696e92e8ec55c4db"
       url: "https://pub.dev"
     source: hosted
-    version: "8.2.3"
+    version: "8.2.4"
   extended_image_library:
     dependency: transitive
     description:

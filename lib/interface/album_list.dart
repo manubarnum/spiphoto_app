@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:spiphoto_app/acces_wordpress.dart';
+import 'package:spiphoto_app/service/acces_wordpress.dart';
 import 'package:spiphoto_app/interface/album_details_screen.dart';
 
 class MyList extends StatefulWidget {

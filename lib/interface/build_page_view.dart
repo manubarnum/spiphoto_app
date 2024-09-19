@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
-import '../image_wp_info.dart';
+import 'package:spiphoto_app/service/image_wp_info.dart';
 import 'package:extended_image/extended_image.dart';
+import 'package:spiphoto_app/service/wallpaper_screen.dart'; // Importer le fichier wallpaper_screen.dart
 
 Widget buildPageView(
     BuildContext context, List<ImageWpInfo> imageInfos, int initialIndex) {
   PageController pageController = PageController(
     initialPage: initialIndex,
   );
+
+  // Instance de WallpaperScreen pour gérer les interactions avec MethodChannel
+  WallpaperScreen wallpaperScreen = WallpaperScreen();
 
   return Scaffold(
     body: Stack(
@@ -49,28 +53,37 @@ Widget buildPageView(
                       ),
                     ),
                   ),
-                  // Ajouter l'adresse de l'image en dessous de chaque photo
-                  /* Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Text(
-                      imageInfos[index].landscapeUrl,
-                      style: TextStyle(color: Colors.white, fontSize: 14.0),
-                      textAlign: TextAlign.center,
-                    ),
-                  ), */
                 ],
               );
             },
           ),
         ),
+        // Bouton retour
         Positioned(
           top: 16.0,
           left: 16.0,
           child: IconButton(
             icon: Icon(Icons.arrow_back, color: Colors.white),
             onPressed: () {
-              Navigator.pop(context); // Retourne à l'écran précédent
+              Navigator.pop(context);
             },
+          ),
+        ),
+        // Bouton flottant pour définir le fond d'écran
+        Positioned(
+          bottom: 16.0,
+          right: 16.0,
+          child: FloatingActionButton(
+            backgroundColor: Colors.blue,
+            onPressed: () {
+              // Obtenez l'URL de l'image actuellement affichée
+              int currentIndex = pageController.page!.round();
+              String currentImageUrl = imageInfos[currentIndex].landscapeUrl;
+
+              // Utiliser la méthode showWallpaperDialog depuis wallpaper_screen.dart
+              wallpaperScreen.showWallpaperDialog(context, currentImageUrl);
+            },
+            child: Icon(Icons.wallpaper, color: Colors.white),
           ),
         ),
       ],

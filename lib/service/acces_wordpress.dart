@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:html/parser.dart' show parse;
-import 'image_wp_info.dart';
+import 'package:spiphoto_app/service/image_wp_info.dart';
 
 // Appel de la fonction fetchAlbums lors de l'initialisation du widget
 
