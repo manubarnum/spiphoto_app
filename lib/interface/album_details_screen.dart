@@ -11,33 +11,47 @@ class AlbumDetailsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        iconTheme: IconThemeData(color: Color.fromARGB(255, 23, 0, 34)),
-        backgroundColor: const Color.fromARGB(255, 1, 55, 13),
-        centerTitle: true,
-        title: Text(
-          album.title,
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-        ),
-      ),
       body: SingleChildScrollView(
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Affichage du titre de l'album
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Text(
+                album.title, // Affichage du titre de l'album
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            // FutureBuilder pour charger et afficher les images de l'album
             FutureBuilder<List<ImageWpInfo>>(
               future: extractImagesFromHtml(album.content['rendered']),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
-                  return CircularProgressIndicator();
+                  return const Center(child: CircularProgressIndicator());
                 } else if (snapshot.hasError) {
-                  return Text('Erreur: ${snapshot.error}');
+                  return Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Text('Erreur: ${snapshot.error}'),
+                  );
                 } else {
                   List<ImageWpInfo>? imageInfos = snapshot.data;
 
                   if (imageInfos == null || imageInfos.isEmpty) {
-                    return Text('Aucune image à afficher.');
+                    return const Padding(
+                      padding: EdgeInsets.all(16.0),
+                      child: Text('Aucune image à afficher.'),
+                    );
                   }
 
-                  return buildGridView(context, imageInfos);
+                  // Afficher la grille des images
+                  return Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: buildGridView(context, imageInfos),
+                  );
                 }
               },
             ),

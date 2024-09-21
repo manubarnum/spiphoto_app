@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:spiphoto_app/service/acces_wordpress.dart';
-import 'package:spiphoto_app/interface/album_details_screen.dart';
 
 class MyList extends StatefulWidget {
   const MyList({Key? key}) : super(key: key);
@@ -24,49 +23,43 @@ class _MyListState extends State<MyList> {
       child: FutureBuilder<List<Album>>(
         future: futureAlbums,
         builder: (context, snapshot) {
-          if (snapshot.hasData) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const CircularProgressIndicator(); // Affiche le spinner de chargement
+          } else if (snapshot.hasError) {
+            return Text('Erreur: ${snapshot.error}');
+          } else if (snapshot.hasData) {
             final List<Album> albums = snapshot.data!;
-            return Column(
-              children: [
-                Expanded(
-                  child: ListView.builder(
-                    itemCount: albums.length,
-                    itemBuilder: (context, index) {
-                      return Card(
-                        elevation: 5,
-                        margin: EdgeInsets.all(10),
-                        child: Column(
-                          children: [
-                            ListTile(
-                              title: Text(
-                                albums[index].title,
-                                style: Theme.of(context).textTheme.titleMedium,
-                              ),
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    fullscreenDialog: false,
-                                    builder: (context) => AlbumDetailsScreen(
-                                        album: albums[index]),
-                                  ),
-                                );
-                              },
-                            ),
-                            // Ajoutez d'autres widgets ici si nécessaire
-                          ],
-                        ),
+
+            if (albums.isEmpty) {
+              return const Text('Aucun album disponible.');
+            }
+
+            return ListView.builder(
+              itemCount: albums.length,
+              itemBuilder: (context, index) {
+                return Card(
+                  elevation: 5,
+                  margin: const EdgeInsets.all(10),
+                  child: ListTile(
+                    title: Text(
+                      albums[index].title,
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    onTap: () {
+                      // Utiliser Navigator.pushNamed pour naviguer vers AlbumDetailsScreen
+                      Navigator.pushNamed(
+                        context,
+                        '/album_details_screen',
+                        arguments:
+                            albums[index], // Passer l'album comme argument
                       );
                     },
                   ),
-                ),
-              ],
+                );
+              },
             );
-          } else if (snapshot.hasError) {
-            return Text('Error: ${snapshot.error}');
           }
-          // By default, show a loading spinner.
-          return const CircularProgressIndicator();
+          return const Text('Aucune donnée disponible.');
         },
       ),
     );
