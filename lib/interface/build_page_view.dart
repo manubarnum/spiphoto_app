@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:spiphoto_app/service/image_wp_info.dart';
 import 'package:extended_image/extended_image.dart';
-import 'package:spiphoto_app/service/wallpaper_screen.dart'; // Importer le fichier wallpaper_screen.dart
+import 'package:spiphoto_app/service/wallpaper_screen.dart';
 
 Widget buildPageView(
     BuildContext context, List<ImageWpInfo> imageInfos, int initialIndex) {
@@ -9,84 +9,118 @@ Widget buildPageView(
     initialPage: initialIndex,
   );
 
-  // Instance de WallpaperScreen pour gérer les interactions avec MethodChannel
   WallpaperScreen wallpaperScreen = WallpaperScreen();
 
   return Scaffold(
-    body: Stack(
-      children: [
-        Container(
-          height: double.infinity,
-          child: PageView.builder(
-            controller: pageController,
-            itemCount: imageInfos.length,
-            itemBuilder: (context, index) {
-              return Column(
-                children: [
-                  Container(
-                    margin: EdgeInsets.all(16.0),
-                    constraints: BoxConstraints(
-                      minHeight: 100,
-                      minWidth: 100,
-                    ),
-                    decoration: BoxDecoration(
-                      border: Border.all(
-                        color: Color.fromARGB(255, 255, 255, 255),
-                        width: 5.0,
-                      ),
-                      borderRadius: BorderRadius.circular(10.0),
-                    ),
-                    child: ExtendedImage.network(
-                      imageInfos[index].landscapeUrl,
-                      fit: BoxFit.contain,
-                      enableSlideOutPage: true,
-                      mode: ExtendedImageMode.gesture,
-                      initGestureConfigHandler: (state) => GestureConfig(
-                        minScale: 1.0,
-                        animationMinScale: 0.8,
-                        maxScale: 3.0,
-                        animationMaxScale: 3.5,
-                        speed: 1.0,
-                        inertialSpeed: 100.0,
-                        initialScale: 1.0,
-                        inPageView: false,
-                      ),
-                    ),
-                  ),
-                ],
-              );
-            },
-          ),
-        ),
-        // Bouton retour
-        Positioned(
-          top: 16.0,
-          left: 16.0,
-          child: IconButton(
-            icon: Icon(Icons.arrow_back, color: Colors.white),
-            onPressed: () {
-              Navigator.pop(context);
-            },
-          ),
-        ),
-        // Bouton flottant pour définir le fond d'écran
-        Positioned(
-          bottom: 16.0,
-          right: 16.0,
-          child: FloatingActionButton(
-            backgroundColor: Colors.blue,
-            onPressed: () {
-              // Obtenez l'URL de l'image actuellement affichée
-              int currentIndex = pageController.page!.round();
-              String currentImageUrl = imageInfos[currentIndex].landscapeUrl;
+    body: OrientationBuilder(
+      builder: (context, orientation) {
+        // Get screen dimensions using MediaQuery for responsive layout
+        var screenWidth = MediaQuery.of(context).size.width;
+        var screenHeight = MediaQuery.of(context).size.height;
 
-              // Utiliser la méthode showWallpaperDialog depuis wallpaper_screen.dart
-              wallpaperScreen.showWallpaperDialog(context, currentImageUrl);
-            },
-            child: Icon(Icons.wallpaper, color: Colors.white),
-          ),
-        ),
-      ],
+        // Set dynamic aspect ratio based on orientation
+        double aspectRatio =
+            orientation == Orientation.portrait ? 3 / 2 : 16 / 9;
+
+        return Stack(
+          children: [
+            Container(
+              height: double.infinity,
+              child: PageView.builder(
+                controller: pageController,
+                itemCount: imageInfos.length,
+                itemBuilder: (context, index) {
+                  return Column(
+                    children: [
+                      Expanded(
+                        child: Container(
+                          margin: EdgeInsets.symmetric(
+                              horizontal:
+                                  screenWidth * 0.05, // 5% horizontal margin
+                              vertical:
+                                  screenHeight * 0.03 // 3% vertical margin
+                              ),
+                          decoration: BoxDecoration(
+                            border: Border.all(
+                              color: Colors.white,
+                              width: 5.0,
+                            ),
+                            borderRadius: BorderRadius.circular(
+                                15.0), // Softer rounded corners
+                          ),
+                          child: AspectRatio(
+                            aspectRatio: aspectRatio,
+                            child: ExtendedImage.network(
+                              imageInfos[index].landscapeUrl,
+                              fit: BoxFit
+                                  .cover, // Changed to cover for a more uniform display
+                              enableSlideOutPage: true,
+                              mode: ExtendedImageMode.gesture,
+                              loadStateChanged: (ExtendedImageState state) {
+                                switch (state.extendedImageLoadState) {
+                                  case LoadState.loading:
+                                    return const Center(
+                                        child: CircularProgressIndicator());
+                                  case LoadState.completed:
+                                    return null;
+                                  case LoadState.failed:
+                                    return const Center(
+                                        child: Icon(Icons.error,
+                                            color: Colors.red));
+                                }
+                              },
+                              initGestureConfigHandler: (state) =>
+                                  GestureConfig(
+                                minScale: 1.0,
+                                animationMinScale: 0.8,
+                                maxScale: 3.0,
+                                animationMaxScale: 3.5,
+                                speed: 1.0,
+                                inertialSpeed: 100.0,
+                                initialScale: 1.0,
+                                inPageView: false,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ),
+            // Back button with padding adjustment based on orientation
+            Positioned(
+              top: 16.0,
+              left: 16.0,
+              child: IconButton(
+                icon: const Icon(Icons.arrow_back, color: Colors.white),
+                onPressed: () {
+                  Navigator.pop(context);
+                },
+              ),
+            ),
+            // Floating Action Button to set wallpaper, with dynamic position adjustment
+            Positioned(
+              bottom: screenHeight * 0.05, // Adjusted based on screen height
+              right: screenWidth * 0.05, // Adjusted based on screen width
+              child: FloatingActionButton(
+                backgroundColor: Colors.blue,
+                onPressed: () {
+                  int currentIndex =
+                      pageController.page?.round() ?? initialIndex;
+                  String currentImageUrl =
+                      imageInfos[currentIndex].landscapeUrl;
+
+                  wallpaperScreen.showWallpaperDialog(context, currentImageUrl);
+                },
+                tooltip: 'Définir comme fond d\'écran',
+                child: const Icon(Icons.wallpaper, color: Colors.white),
+              ),
+            ),
+          ],
+        );
+      },
     ),
   );
 }

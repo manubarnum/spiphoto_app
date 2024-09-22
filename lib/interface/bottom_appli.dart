@@ -4,13 +4,11 @@ import 'package:flutter/material.dart';
 class BottomAppli extends StatelessWidget {
   const BottomAppli({super.key});
 
-  // Fonction pour ouvrir le lien du site
   Future<void> _launchURL() async {
     final Uri url = Uri.parse('https://www.spiphoto.fr/');
     if (!await launchUrl(
       url,
-      mode: LaunchMode
-          .externalApplication, // Ouvre l'URL dans un navigateur externe
+      mode: LaunchMode.externalApplication,
     )) {
       throw 'Impossible d\'ouvrir $url';
     }
@@ -18,31 +16,27 @@ class BottomAppli extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BottomAppBar(
-      color: const Color.fromARGB(255, 1, 55, 13),
-      child: Container(
-        height: 56.0, // Fixer la hauteur du BottomAppBar à 56 pixels
-        child: Row(
-          mainAxisAlignment:
-              MainAxisAlignment.spaceAround, // Espacer les icônes
-          children: [
-            // Icône pour revenir à la page d'accueil
-            IconButton(
-              icon: const Icon(Icons.home, color: Colors.white),
-              onPressed: () {
-                // Utilisation de pushNamedAndRemoveUntil pour être sûr de revenir à l'accueil
-                Navigator.pushNamedAndRemoveUntil(
-                    context, '/', (route) => false);
-              },
-            ),
-            // Icône pour ouvrir le site
-            IconButton(
-              icon: const Icon(Icons.web, color: Colors.white),
-              onPressed: _launchURL,
-            ),
-          ],
+    return BottomNavigationBar(
+      backgroundColor: const Color(0xFF007A1A), // Vert adouci
+      selectedItemColor: Colors.white,
+      unselectedItemColor: Colors.white70,
+      items: [
+        BottomNavigationBarItem(
+          icon: const Icon(Icons.home),
+          label: 'Accueil', // Label sous l'icône
         ),
-      ),
+        BottomNavigationBarItem(
+          icon: const Icon(Icons.web),
+          label: 'Site', // Label sous l'icône
+        ),
+      ],
+      onTap: (index) {
+        if (index == 0) {
+          Navigator.pushNamedAndRemoveUntil(context, '/', (route) => false);
+        } else if (index == 1) {
+          _launchURL();
+        }
+      },
     );
   }
 }
