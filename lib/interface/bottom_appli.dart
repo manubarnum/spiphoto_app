@@ -17,7 +17,7 @@ class BottomAppli extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BottomNavigationBar(
-      backgroundColor: const Color(0xFF007A1A), // Vert adouci
+      backgroundColor: const Color.fromARGB(255, 23, 146, 50), // Vert adouci
       selectedItemColor: Colors.white,
       unselectedItemColor: Colors.white70,
       items: [

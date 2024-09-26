@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:spiphoto_app/service/image_wp_info.dart';
 import 'package:extended_image/extended_image.dart';
 import 'package:spiphoto_app/service/wallpaper_screen.dart';
+import 'package:spiphoto_app/service/share_service.dart'; // Importer le service de partage
 
 Widget buildPageView(
     BuildContext context, List<ImageWpInfo> imageInfos, int initialIndex) {
@@ -10,6 +11,8 @@ Widget buildPageView(
   );
 
   WallpaperScreen wallpaperScreen = WallpaperScreen();
+  ShareService shareService =
+      ShareService(); // Créer une instance de ShareService
 
   return Scaffold(
     body: OrientationBuilder(
@@ -100,22 +103,47 @@ Widget buildPageView(
                 },
               ),
             ),
-            // Floating Action Button to set wallpaper, with dynamic position adjustment
+            // Column for two Floating Action Buttons
             Positioned(
               bottom: screenHeight * 0.05, // Adjusted based on screen height
               right: screenWidth * 0.05, // Adjusted based on screen width
-              child: FloatingActionButton(
-                backgroundColor: Colors.blue,
-                onPressed: () {
-                  int currentIndex =
-                      pageController.page?.round() ?? initialIndex;
-                  String currentImageUrl =
-                      imageInfos[currentIndex].landscapeUrl;
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  FloatingActionButton(
+                    backgroundColor: Colors.blue,
+                    onPressed: () {
+                      int currentIndex =
+                          pageController.page?.round() ?? initialIndex;
+                      String currentImageUrl =
+                          imageInfos[currentIndex].landscapeUrl;
 
-                  wallpaperScreen.showWallpaperDialog(context, currentImageUrl);
-                },
-                tooltip: 'Définir comme fond d\'écran',
-                child: const Icon(Icons.wallpaper, color: Colors.white),
+                      wallpaperScreen.showWallpaperDialog(
+                          context, currentImageUrl);
+                    },
+                    tooltip: 'Définir comme fond d\'écran',
+                    child: const Icon(Icons.wallpaper, color: Colors.white),
+                  ),
+                  const SizedBox(height: 16.0), // Space between the buttons
+                  FloatingActionButton(
+                    backgroundColor: Colors.pink,
+                    onPressed: () {
+                      int currentIndex =
+                          pageController.page?.round() ?? initialIndex;
+                      String currentImageUrl =
+                          imageInfos[currentIndex].landscapeUrl;
+                      String currentDescription =
+                          imageInfos[currentIndex].description;
+                      print('Current Description: $currentDescription');
+
+                      // Utiliser le service de partage pour partager sur Instagram
+                      shareService.shareImageOnInstagram(
+                          context, currentImageUrl, currentDescription);
+                    },
+                    tooltip: 'Partager sur Instagram',
+                    child: const Icon(Icons.share, color: Colors.white),
+                  ),
+                ],
               ),
             ),
           ],

@@ -20,6 +20,7 @@ class Album {
     // Remplacer les occurrences de '&rsquo;' par '\u2019' dans le titre
     title = title.replaceAll('&rsquo;', '\u2019');
   }
+
   factory Album.fromJson(Map<String, dynamic> json) {
     return Album(
       content: json['content'] ?? {}, // Assuming content is a Map
@@ -54,6 +55,7 @@ Future<List<ImageWpInfo>> extractImagesFromHtml(String htmlString) async {
     for (var element in elements) {
       var portraitUrl = element.attributes['src'];
       String landscapeUrl = "";
+      String postUrl = "";
 
       if (portraitUrl != null && portraitUrl.contains('-150x150')) {
         // Supprimer la partie '-150x150' pour obtenir l'URL complète
@@ -62,8 +64,19 @@ Future<List<ImageWpInfo>> extractImagesFromHtml(String htmlString) async {
         landscapeUrl = portraitUrl ?? ""; // Si aucune modification nécessaire
       }
 
+      // Supposer que l'URL du post est l'URL de l'image sans le nom du fichier
+      if (landscapeUrl.isNotEmpty) {
+        var uri = Uri.parse(landscapeUrl);
+        postUrl = uri.origin + uri.path.substring(0, uri.path.lastIndexOf('/'));
+      }
+
       // Extraire la description du texte alternatif (title)
       var description = element.attributes['title'] ?? "";
+
+      // Ajouter l'URL du post à la description
+      description += "\nPost URL: $postUrl";
+
+      print('Description: $description');
 
       // Ajouter les informations de l'image à la liste
       imageInfos.add(

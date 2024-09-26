@@ -6,7 +6,8 @@ class MyAppBarAccueil extends StatelessWidget implements PreferredSizeWidget {
   @override
   Widget build(BuildContext context) {
     return AppBar(
-      backgroundColor: const Color(0xFF007A1A), // Un vert plus doux
+      backgroundColor:
+          const Color.fromARGB(255, 23, 146, 50), // Un vert plus doux
       elevation: 4.0, // Ajout d'une ombre pour un léger effet de profondeur
       leading: Padding(
         padding: const EdgeInsets.all(8.0),
