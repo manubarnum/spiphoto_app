@@ -15,7 +15,7 @@ dependencies:
   url_launcher: ^6.2.6
   easy_image_viewer: ^1.4.1
   extended_image: ^9.1.0
-  share_plus: ^10.1.4
+  share_plus: ^11.0.0
  
   
 # Dépendances spécifiques dave
