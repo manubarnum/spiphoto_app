@@ -16,9 +16,11 @@ class ShareService {
 
       // Utilisez la méthode `shareXFiles` pour partager l'image avec une légende
       final xFile = XFile(file.path);
-      await Share.shareXFiles(
-        [xFile],
-        text: caption, // Utilisez la légende fournie ici
+      await SharePlus.instance.share(
+        ShareParams(
+          files: [xFile],
+          text: caption,
+        ),
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
