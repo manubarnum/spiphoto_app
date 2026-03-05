@@ -33,7 +33,7 @@ class Album {
 
 Future<List<Album>> fetchAlbums() async {
   final response = await http.get(
-      Uri.parse('https://a6a1-408e804a28c4.wptiger.fr/wp-json/wp/v2/posts'));
+      Uri.parse('https://www.spiphoto.fr/wp-json/wp/v2/posts'));
 
   if (response.statusCode == 200) {
     final List<dynamic> jsonList = jsonDecode(response.body);
