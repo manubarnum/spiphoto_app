@@ -13,30 +13,30 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      theme: ThemeData.dark(),
+      theme: ThemeData.dark(), // ThemeData.dark() n'est pas const
       title: 'SPIPHOTO, l\'application',
-      home: ScaffoldWithNavigation(),
+      home: const ScaffoldWithNavigation(),
     );
   }
 }
 
 class ScaffoldWithNavigation extends StatelessWidget {
+  const ScaffoldWithNavigation({super.key}); // 👈 const ajouté
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: MyAppBarAccueil(),
+      appBar: const MyAppBarAccueil(), // 👈 const ajouté
       body: Navigator(
         onGenerateRoute: (RouteSettings settings) {
           WidgetBuilder builder;
           switch (settings.name) {
             case '/':
-              builder = (BuildContext _) => MyList(); // Liste des articles
+              builder = (BuildContext _) => const MyList(); // 👈 const ajouté
               break;
             case '/album_details_screen':
-              // Récupérer les arguments passés lors de la navigation
               final album = settings.arguments as Album;
-              builder = (BuildContext _) =>
-                  AlbumDetailsScreen(album: album); // Passer l'album
+              builder = (BuildContext _) => AlbumDetailsScreen(album: album);
               break;
             default:
               throw Exception('Route non définie : ${settings.name}');
@@ -44,7 +44,7 @@ class ScaffoldWithNavigation extends StatelessWidget {
           return MaterialPageRoute(builder: builder, settings: settings);
         },
       ),
-      bottomNavigationBar: BottomAppli(),
+      bottomNavigationBar: const BottomAppli(), // 👈 const ajouté
     );
   }
 }
