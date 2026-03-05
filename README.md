@@ -57,7 +57,45 @@ assets/
 
 ---
 
-## 🚀 Installation & lancement
+## 📲 Téléchargement
+
+| Public | Lien |
+|---|---|
+| 👥 **Membres SPIPHOTO** | Disponible sur le Play Store associatif (accès réservé) |
+| 🌍 **Visiteurs / Développeurs** | [⬇️ Télécharger l'APK](../../releases/latest) — voir les Releases GitHub |
+
+> ⚠️ Pour installer l'APK sur Android, activez **"Sources inconnues"** dans les paramètres de sécurité de votre appareil.
+
+---
+
+## 🏗️ Générer l'APK soi-même
+
+```bash
+# Cloner le projet
+git clone https://github.com/manubarnum/spiphoto_app.git
+cd spiphoto_app
+
+# Installer les dépendances
+flutter pub get
+
+# Générer l'APK de release (optimisé par architecture)
+flutter build apk --split-per-abi
+
+# ou APK universel (compatible tous appareils)
+flutter build apk
+```
+
+Les fichiers générés se trouvent dans :
+```
+build/app/outputs/flutter-apk/
+├── app-arm64-v8a-release.apk   # Appareils récents (recommandé)
+├── app-armeabi-v7a-release.apk # Appareils anciens
+└── app-release.apk              # APK universel
+```
+
+---
+
+## 🚀 Installation & lancement (développement)
 
 ### Prérequis
 
@@ -99,7 +137,7 @@ flutter run
 L'URL de l'API WordPress est définie dans `lib/service/acces_wordpress.dart` :
 
 ```dart
-Uri.parse('https://www.xxxxxxxxxxxxxxxxxxx.fr/wp-json/wp/v2/posts')
+Uri.parse('https://a6a1-408e804a28c4.wptiger.fr/wp-json/wp/v2/posts')
 ```
 
 Pour pointer vers un autre site WordPress, modifiez cette URL.
@@ -120,4 +158,6 @@ Ce projet est développé pour le club **SPIPHOTO**. Les contributions sont les 
 
 ## 📄 Licence
 
-Projet associatif — tous droits réservés © SPIPHOTO
+Ce projet est sous licence **MIT** — voir le fichier [LICENSE](LICENSE) pour plus de détails.
+
+© 2024 SPIPHOTO — Emmanuel ENKIRCHE
