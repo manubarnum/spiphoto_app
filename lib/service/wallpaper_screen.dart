@@ -5,15 +5,27 @@ class WallpaperScreen {
   static const platform = MethodChannel('fr.enkirche/wallpaper');
 
   // Méthode pour définir le fond d'écran via le MethodChannel
-  Future<void> setWallpaper(String imageUrl, int wallpaperType) async {
+  Future<void> setWallpaper(
+      BuildContext context, String imageUrl, int wallpaperType) async {
     try {
-      final result = await platform.invokeMethod('setWallpaper', {
+      await platform.invokeMethod('setWallpaper', {
         'imageUrl': imageUrl,
         'wallpaperType': wallpaperType,
       });
-      print(result); // Affiche le message de succès ou autre action si besoin
+
+      // Confirmer le succès à l'utilisateur
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Fond d\'écran défini avec succès !')),
+      );
     } on PlatformException catch (e) {
-      print("Erreur lors de la définition du fond d'écran : '${e.message}'.");
+      // Remonter l'erreur vers l'UI au lieu d'un print()
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content: Text(
+                'Erreur lors de la définition du fond d\'écran : ${e.message}')),
+      );
     }
   }
 
@@ -23,30 +35,30 @@ class WallpaperScreen {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text('Choisir l\'écran'),
-          content:
-              Text('Où voulez-vous définir l\'image comme fond d\'écran ?'),
+          title: const Text('Choisir l\'écran'),
+          content: const Text(
+              'Où voulez-vous définir l\'image comme fond d\'écran ?'),
           actions: <Widget>[
             TextButton(
               onPressed: () {
                 Navigator.of(context).pop();
-                setWallpaper(imageUrl, 1); // Écran d'accueil
+                setWallpaper(context, imageUrl, 1); // Écran d'accueil
               },
-              child: Text('Écran d\'accueil'),
+              child: const Text('Écran d\'accueil'),
             ),
             TextButton(
               onPressed: () {
                 Navigator.of(context).pop();
-                setWallpaper(imageUrl, 2); // Écran de verrouillage
+                setWallpaper(context, imageUrl, 2); // Écran de verrouillage
               },
-              child: Text('Écran de verrouillage'),
+              child: const Text('Écran de verrouillage'),
             ),
             TextButton(
               onPressed: () {
                 Navigator.of(context).pop();
-                setWallpaper(imageUrl, 3); // Les deux
+                setWallpaper(context, imageUrl, 3); // Les deux
               },
-              child: Text('Les deux'),
+              child: const Text('Les deux'),
             ),
           ],
         );

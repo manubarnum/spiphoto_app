@@ -3,10 +3,24 @@ import 'package:spiphoto_app/service/acces_wordpress.dart';
 import 'package:spiphoto_app/service/image_wp_info.dart';
 import 'package:spiphoto_app/interface/build_grid_view.dart';
 
-class AlbumDetailsScreen extends StatelessWidget {
+class AlbumDetailsScreen extends StatefulWidget {
   final Album album;
 
-  AlbumDetailsScreen({required this.album});
+  const AlbumDetailsScreen({Key? key, required this.album}) : super(key: key);
+
+  @override
+  State<AlbumDetailsScreen> createState() => _AlbumDetailsScreenState();
+}
+
+class _AlbumDetailsScreenState extends State<AlbumDetailsScreen> {
+  late Future<List<ImageWpInfo>> _futureImages;
+
+  @override
+  void initState() {
+    super.initState();
+    // Future créé une seule fois dans initState() — pas recalculé à chaque rebuild
+    _futureImages = extractImagesFromHtml(widget.album.content['rendered']);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -15,20 +29,20 @@ class AlbumDetailsScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Affichage du titre de l'album
+            // Titre de l'album
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: Text(
-                album.title, // Affichage du titre de l'album
+                widget.album.title,
                 style: const TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
                 ),
               ),
             ),
-            // FutureBuilder pour charger et afficher les images de l'album
+            // Grille des images
             FutureBuilder<List<ImageWpInfo>>(
-              future: extractImagesFromHtml(album.content['rendered']),
+              future: _futureImages, // 👈 mis en cache dans initState()
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
@@ -38,7 +52,7 @@ class AlbumDetailsScreen extends StatelessWidget {
                     child: Text('Erreur: ${snapshot.error}'),
                   );
                 } else {
-                  List<ImageWpInfo>? imageInfos = snapshot.data;
+                  final List<ImageWpInfo>? imageInfos = snapshot.data;
 
                   if (imageInfos == null || imageInfos.isEmpty) {
                     return const Padding(
@@ -47,7 +61,6 @@ class AlbumDetailsScreen extends StatelessWidget {
                     );
                   }
 
-                  // Afficher la grille des images
                   return Padding(
                     padding: const EdgeInsets.all(16.0),
                     child: buildGridView(context, imageInfos),
