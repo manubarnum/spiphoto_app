@@ -137,7 +137,7 @@ flutter run
 L'URL de l'API WordPress est définie dans `lib/service/acces_wordpress.dart` :
 
 ```dart
-Uri.parse('https://a6a1-408e804a28c4.wptiger.fr/wp-json/wp/v2/posts')
+Uri.parse('https://www.spiphoto.fr/wp-json/wp/v2/posts')
 ```
 
 Pour pointer vers un autre site WordPress, modifiez cette URL.
