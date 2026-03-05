@@ -8,13 +8,16 @@ class ShareService {
   Future<void> shareImageOnInstagram(
       BuildContext context, String imageUrl, String caption) async {
     try {
-      // Téléchargez l'image à partir de l'URL et stockez-la localement
+      // Télécharger l'image depuis l'URL et la stocker localement
       final response = await http.get(Uri.parse(imageUrl));
       final documentDirectory = await getApplicationDocumentsDirectory();
       final file = File('${documentDirectory.path}/temp_image.jpg');
       file.writeAsBytesSync(response.bodyBytes);
 
-      // Utilisez la méthode `shareXFiles` pour partager l'image avec une légende
+      // Vérifier que le widget est toujours monté avant d'utiliser le contexte
+      if (!context.mounted) return;
+
+      // Partager l'image avec une légende
       final xFile = XFile(file.path);
       await SharePlus.instance.share(
         ShareParams(
@@ -23,6 +26,9 @@ class ShareService {
         ),
       );
     } catch (e) {
+      // Vérifier que le widget est toujours monté avant d'afficher le SnackBar
+      if (!context.mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Erreur lors du partage de l\'image : $e')),
       );

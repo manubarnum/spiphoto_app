@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:spiphoto_app/service/acces_wordpress.dart'; // Assure-toi que l'importation des services est correcte
+import 'package:spiphoto_app/service/acces_wordpress.dart';
 import 'package:spiphoto_app/service/image_wp_info.dart';
 
 class MyList extends StatefulWidget {
@@ -11,12 +11,22 @@ class MyList extends StatefulWidget {
 
 class _MyListState extends State<MyList> {
   late Future<List<Album>> futureAlbums;
-  late Future<List<ImageWpInfo>> futureImages;
+
+  // Cache : évite de recalculer extractImagesFromHtml() à chaque rebuild
+  final Map<int, Future<List<ImageWpInfo>>> _imageCache = {};
 
   @override
   void initState() {
     super.initState();
     futureAlbums = fetchAlbums();
+  }
+
+  // Retourne le Future depuis le cache, ou le crée s'il n'existe pas encore
+  Future<List<ImageWpInfo>> _getImagesForAlbum(Album album) {
+    return _imageCache.putIfAbsent(
+      album.id,
+      () => extractImagesFromHtml(album.content['rendered']),
+    );
   }
 
   @override
@@ -40,108 +50,84 @@ class _MyListState extends State<MyList> {
               itemCount: albums.length,
               itemBuilder: (context, index) {
                 return FutureBuilder<List<ImageWpInfo>>(
-                  future: extractImagesFromHtml(albums[index].content[
-                      'rendered']), // Assuming the HTML is stored in album.contentetc
+                  future: _getImagesForAlbum(albums[index]), // 👈 cache ici
                   builder: (context, imageSnapshot) {
-                    if (imageSnapshot.hasData &&
-                        imageSnapshot.data!.isNotEmpty) {
-                      final String imageUrl =
-                          imageSnapshot.data!.first.portraitUrl;
+                    // Image de couverture (optionnelle)
+                    final String? imageUrl = (imageSnapshot.hasData &&
+                            imageSnapshot.data!.isNotEmpty)
+                        ? imageSnapshot.data!.first.portraitUrl
+                        : null;
 
-                      return Card(
-                        elevation: 8,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(15.0),
-                        ),
-                        margin: const EdgeInsets.symmetric(
-                          vertical: 10.0,
-                          horizontal: 20.0,
-                        ),
-                        child: ListTile(
-                          leading: ClipRRect(
-                            borderRadius: BorderRadius.circular(8.0),
-                            child: Image.network(
-                              imageUrl, // La première image récupérée
-                              width: 50.0,
-                              height: 50.0,
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) =>
-                                  Icon(
-                                Icons.broken_image,
-                                color: Colors.grey[400],
-                              ),
-                            ),
-                          ),
-                          title: Text(
-                            albums[index].title,
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleMedium
-                                ?.copyWith(
-                              color: Colors.grey[800],
-                              fontWeight: FontWeight.bold,
-                              shadows: [
-                                Shadow(
-                                  offset: Offset(1.0, 1.0),
-                                  blurRadius: 2.0,
-                                  color: Colors.black26,
-                                ),
-                              ],
-                            ),
-                          ),
-                          onTap: () {
-                            Navigator.pushNamed(
-                              context,
-                              '/album_details_screen',
-                              arguments: albums[index],
-                            );
-                          },
-                        ),
-                      );
-                    } else {
-                      return Card(
-                        elevation: 8,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(15.0),
-                        ),
-                        margin: const EdgeInsets.symmetric(
-                          vertical: 10.0,
-                          horizontal: 20.0,
-                        ),
-                        child: ListTile(
-                          title: Text(
-                            albums[index].title,
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleMedium
-                                ?.copyWith(
-                              color: Colors.grey[800],
-                              fontWeight: FontWeight.bold,
-                              shadows: [
-                                Shadow(
-                                  offset: Offset(1.0, 1.0),
-                                  blurRadius: 2.0,
-                                  color: Colors.black26,
-                                ),
-                              ],
-                            ),
-                          ),
-                          onTap: () {
-                            Navigator.pushNamed(
-                              context,
-                              '/album_details_screen',
-                              arguments: albums[index],
-                            );
-                          },
-                        ),
-                      );
-                    }
+                    // Un seul widget Card, avec ou sans image 👇
+                    return _AlbumCard(
+                      album: albums[index],
+                      imageUrl: imageUrl,
+                    );
                   },
                 );
               },
             );
           }
           return const Text('Aucune donnée disponible.');
+        },
+      ),
+    );
+  }
+}
+
+// Widget extrait pour éviter la duplication de code
+class _AlbumCard extends StatelessWidget {
+  final Album album;
+  final String? imageUrl;
+
+  const _AlbumCard({required this.album, this.imageUrl});
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      elevation: 8,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(15.0),
+      ),
+      margin: const EdgeInsets.symmetric(
+        vertical: 10.0,
+        horizontal: 20.0,
+      ),
+      child: ListTile(
+        leading: imageUrl != null
+            ? ClipRRect(
+                borderRadius: BorderRadius.circular(8.0),
+                child: Image.network(
+                  imageUrl!,
+                  width: 50.0,
+                  height: 50.0,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => Icon(
+                    Icons.broken_image,
+                    color: Colors.grey[400],
+                  ),
+                ),
+              )
+            : null,
+        title: Text(
+          album.title,
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.bold,
+            shadows: const [
+              Shadow(
+                offset: Offset(1.0, 1.0),
+                blurRadius: 2.0,
+                color: Colors.black26,
+              ),
+            ],
+          ),
+        ),
+        onTap: () {
+          Navigator.pushNamed(
+            context,
+            '/album_details_screen',
+            arguments: album,
+          );
         },
       ),
     );

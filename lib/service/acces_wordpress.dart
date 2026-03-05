@@ -3,10 +3,6 @@ import 'package:http/http.dart' as http;
 import 'package:html/parser.dart' show parse;
 import 'package:spiphoto_app/service/image_wp_info.dart';
 
-// Appel de la fonction fetchAlbums lors de l'initialisation du widget
-
-List<Map<String, dynamic>> albums = []; // Explicitement typé
-
 class Album {
   final Map<String, dynamic> content;
   final int id;
@@ -17,13 +13,13 @@ class Album {
     required this.id,
     required this.title,
   }) {
-    // Remplacer les occurrences de '&rsquo;' par '\u2019' dans le titre
+    // Remplacer les entités HTML dans le titre
     title = title.replaceAll('&rsquo;', '\u2019');
   }
 
   factory Album.fromJson(Map<String, dynamic> json) {
     return Album(
-      content: json['content'] ?? {}, // Assuming content is a Map
+      content: json['content'] ?? {},
       id: json['id'] is int ? json['id'] : 0,
       title:
           json['title']['rendered'] is String ? json['title']['rendered'] : '',
@@ -32,16 +28,15 @@ class Album {
 }
 
 Future<List<Album>> fetchAlbums() async {
-  final response = await http.get(
-      Uri.parse('https://www.spiphoto.fr/wp-json/wp/v2/posts'));
+  final response =
+      await http.get(Uri.parse('https://www.spiphoto.fr/wp-json/wp/v2/posts'));
 
   if (response.statusCode == 200) {
     final List<dynamic> jsonList = jsonDecode(response.body);
-    final List<Album> albums =
-        jsonList.map((json) => Album.fromJson(json)).toList();
-    return albums;
+    return jsonList.map((json) => Album.fromJson(json)).toList();
   } else {
-    throw Exception('Failed to load albums, zut!');
+    throw Exception(
+        'Impossible de charger les albums (${response.statusCode})');
   }
 }
 
@@ -58,27 +53,19 @@ Future<List<ImageWpInfo>> extractImagesFromHtml(String htmlString) async {
       String postUrl = "";
 
       if (portraitUrl != null && portraitUrl.contains('-150x150')) {
-        // Supprimer la partie '-150x150' pour obtenir l'URL complète
         landscapeUrl = portraitUrl.replaceAll('-150x150', '');
       } else {
-        landscapeUrl = portraitUrl ?? ""; // Si aucune modification nécessaire
+        landscapeUrl = portraitUrl ?? "";
       }
 
-      // Supposer que l'URL du post est l'URL de l'image sans le nom du fichier
       if (landscapeUrl.isNotEmpty) {
         var uri = Uri.parse(landscapeUrl);
         postUrl = uri.origin + uri.path.substring(0, uri.path.lastIndexOf('/'));
       }
 
-      // Extraire la description du texte alternatif (title)
       var description = element.attributes['title'] ?? "";
-
-      // Ajouter l'URL du post à la description
       description += "\nPost URL: $postUrl";
 
-      print('Description: $description');
-
-      // Ajouter les informations de l'image à la liste
       imageInfos.add(
         ImageWpInfo(
           portraitUrl: portraitUrl ?? "",
@@ -88,7 +75,6 @@ Future<List<ImageWpInfo>> extractImagesFromHtml(String htmlString) async {
       );
     }
   } catch (e) {
-    print('Erreur de parsing HTML: $e');
     return [];
   }
 
