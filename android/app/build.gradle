@@ -24,7 +24,7 @@ if (flutterVersionName == null) {
 
 android {
     namespace "fr.enkirche.spiphoto_app"
-    compileSdkVersion 35
+    compileSdk 36
     ndkVersion "27.0.12077973"
 
     compileOptions {
@@ -42,8 +42,9 @@ android {
 
     defaultConfig {
         applicationId "fr.enkirche.spiphoto_app"
-        minSdkVersion 21
-        targetSdkVersion 35
+        minSdkVersion flutter.minSdkVersion
+        targetSdk 36
+        minSdkVersion flutter.minSdkVersion
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
     }
