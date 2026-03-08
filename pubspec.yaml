@@ -1,7 +1,7 @@
 name: spiphoto_app
 description: "A SPIPHOTO project."
 publish_to: 'none'
-version: 1.5.0+1
+version: 1.5.0+3
 
 environment:
   sdk: '>=3.3.3 <4.0.0'
