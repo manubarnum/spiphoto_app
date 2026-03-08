@@ -1,12 +1,12 @@
 name: spiphoto_app
 description: "A SPIPHOTO project."
 publish_to: 'none'
-version: 0.1.0
+version: 1.5.0+1
 
 environment:
   sdk: '>=3.3.3 <4.0.0'
 
-# Dépendances du SDK Flutter
+# ── Dépendances ───────────────────────────────────────────────────────────────
 dependencies:
   flutter:
     sdk: flutter
@@ -16,24 +16,23 @@ dependencies:
   easy_image_viewer: ^1.4.1
   extended_image: ^10.0.1
   share_plus: ^11.0.0
- 
-  
-# Dépendances spécifiques dave
+
+# ── Dépendances de développement ─────────────────────────────────────────────
 dev_dependencies:
   flutter_test:
     sdk: flutter
-flutter_lints: ^5.0.0
-flutter_launcher_icons: ^0.14.3
-
+  flutter_lints: ^5.0.0
+  flutter_launcher_icons: ^0.14.3
 
 flutter_icons:
   android: "launcher_icon"
   ios: true
   image_path: "assets/icons/mon_logo1.png"
 
-# Paramètres spécifiques à l'application
+# ── Flutter ───────────────────────────────────────────────────────────────────
 flutter:
   uses-material-design: true
+
   assets:
     - android/app/src/main/res/mipmap-hdpi/ic_launcher.png
     - android/app/src/main/res/mipmap-mdpi/ic_launcher.png
@@ -42,3 +41,4 @@ flutter:
     - android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
     - android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
     - assets/icons/mon_logo1.png
+    - assets/ca/lets-encrypt-r3.pem

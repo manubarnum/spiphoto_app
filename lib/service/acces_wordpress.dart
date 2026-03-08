@@ -3,6 +3,9 @@ import 'package:http/http.dart' as http;
 import 'package:html/parser.dart' show parse;
 import 'package:spiphoto_app/service/image_wp_info.dart';
 
+// ─────────────────────────────────────────────────────────────────────────────
+// MODÈLE ALBUM
+// ─────────────────────────────────────────────────────────────────────────────
 class Album {
   final Map<String, dynamic> content;
   final int id;
@@ -13,7 +16,6 @@ class Album {
     required this.id,
     required this.title,
   }) {
-    // Remplacer les entités HTML dans le titre
     title = title.replaceAll('&rsquo;', '\u2019');
   }
 
@@ -27,9 +29,13 @@ class Album {
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// FETCH ALBUMS
+// ─────────────────────────────────────────────────────────────────────────────
 Future<List<Album>> fetchAlbums() async {
-  final response =
-      await http.get(Uri.parse('https://www.spiphoto.fr/wp-json/wp/v2/posts'));
+  final response = await http.get(
+    Uri.parse('https://www.spiphoto.fr/wp-json/wp/v2/posts'),
+  );
 
   if (response.statusCode == 200) {
     final List<dynamic> jsonList = jsonDecode(response.body);
@@ -40,43 +46,72 @@ Future<List<Album>> fetchAlbums() async {
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// EXTRACTION DES IMAGES DEPUIS LE HTML WORDPRESS
+// ─────────────────────────────────────────────────────────────────────────────
 Future<List<ImageWpInfo>> extractImagesFromHtml(String htmlString) async {
-  List<ImageWpInfo> imageInfos = [];
+  final List<ImageWpInfo> imageInfos = [];
 
   try {
-    var document = parse(htmlString);
-    var elements = document.getElementsByTagName('img');
+    final document = parse(htmlString);
+    final elements = document.getElementsByTagName('img');
 
     for (var element in elements) {
-      var portraitUrl = element.attributes['src'];
-      String landscapeUrl = "";
-      String postUrl = "";
+      final String? src = element.attributes['src'];
+      if (src == null || src.isEmpty) continue;
 
-      if (portraitUrl != null && portraitUrl.contains('-150x150')) {
-        landscapeUrl = portraitUrl.replaceAll('-150x150', '');
-      } else {
-        landscapeUrl = portraitUrl ?? "";
-      }
+      // ── 1. URL plein format (landscapeUrl) ──────────────────────────────
+      // WordPress place des vignettes 150x150 dans src — on retire le suffixe
+      final String landscapeUrl =
+          src.contains('-150x150') ? src.replaceAll('-150x150', '') : src;
 
-      if (landscapeUrl.isNotEmpty) {
-        var uri = Uri.parse(landscapeUrl);
-        postUrl = uri.origin + uri.path.substring(0, uri.path.lastIndexOf('/'));
-      }
+      // ── 2. Vignette optimisée ────────────────────────────────────────────
+      // On reconstruit manuellement l'URL 600x600 depuis le src 150x150.
+      // Si WordPress ne l'a pas générée, le errorBuilder dans Image.network
+      // affichera le fallbackUrl 320x320 (garanti présent dans le srcset).
+      final String thumbnailUrl = src.contains('-150x150')
+          ? src.replaceAll('-150x150', '-600x600')
+          : src;
 
-      var description = element.attributes['title'] ?? "";
-      description += "\nPost URL: $postUrl";
+      final String fallbackUrl = src.contains('-150x150')
+          ? src.replaceAll('-150x150', '-320x320')
+          : src;
 
-      imageInfos.add(
-        ImageWpInfo(
-          portraitUrl: portraitUrl ?? "",
-          landscapeUrl: landscapeUrl,
-          description: description,
-        ),
-      );
+      // ── 3. Description ──────────────────────────────────────────────────
+      final String title = element.attributes['title'] ?? "";
+      final String postUrl = _extractPostUrl(landscapeUrl);
+      final String description = title.isNotEmpty
+          ? "$title\nPost URL: $postUrl"
+          : "Post URL: $postUrl";
+
+      imageInfos.add(ImageWpInfo(
+        portraitUrl: src,
+        thumbnailUrl: thumbnailUrl,
+        fallbackUrl: fallbackUrl,
+        landscapeUrl: landscapeUrl,
+        description: description,
+      ));
     }
   } catch (e) {
     return [];
   }
 
   return imageInfos;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// HELPERS PRIVÉS
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Extrait l'URL du dossier parent depuis une URL d'image.
+String _extractPostUrl(String imageUrl) {
+  if (imageUrl.isEmpty) return "";
+  try {
+    final uri = Uri.parse(imageUrl);
+    final path = uri.path;
+    final dir = path.substring(0, path.lastIndexOf('/'));
+    return uri.origin + dir;
+  } catch (_) {
+    return "";
+  }
 }

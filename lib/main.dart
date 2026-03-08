@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:spiphoto_app/spi_colors.dart';
 import '/interface/appbar_accueil.dart';
 import '/interface/album_list.dart';
 import '/interface/album_details_screen.dart';

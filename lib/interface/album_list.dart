@@ -94,12 +94,18 @@ class _MyListState extends State<MyList> {
                 builder: (context, imageSnapshot) {
                   final String? imageUrl =
                       (imageSnapshot.hasData && imageSnapshot.data!.isNotEmpty)
-                          ? imageSnapshot.data!.first.portraitUrl
+                          ? imageSnapshot.data!.first.thumbnailUrl
+                          : null;
+
+                  final String? fallbackUrl =
+                      (imageSnapshot.hasData && imageSnapshot.data!.isNotEmpty)
+                          ? imageSnapshot.data!.first.fallbackUrl
                           : null;
 
                   return _AlbumCardMagazine(
                     album: albums[index],
                     imageUrl: imageUrl,
+                    fallbackUrl: fallbackUrl,
                     isLoading: imageSnapshot.connectionState ==
                         ConnectionState.waiting,
                   );
@@ -119,12 +125,14 @@ class _MyListState extends State<MyList> {
 class _AlbumCardMagazine extends StatelessWidget {
   final Album album;
   final String? imageUrl;
+  final String? fallbackUrl;
   final bool isLoading;
 
   const _AlbumCardMagazine({
     required this.album,
     required this.isLoading,
     this.imageUrl,
+    this.fallbackUrl,
   });
 
   @override
@@ -166,7 +174,13 @@ class _AlbumCardMagazine extends StatelessWidget {
                       child: const Center(child: CircularProgressIndicator()),
                     );
                   },
-                  errorBuilder: (_, __, ___) => _PlaceholderImage(),
+                  errorBuilder: (_, __, ___) => fallbackUrl != null
+                      ? Image.network(
+                          fallbackUrl!,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => _PlaceholderImage(),
+                        )
+                      : _PlaceholderImage(),
                 )
               else if (isLoading)
                 Container(

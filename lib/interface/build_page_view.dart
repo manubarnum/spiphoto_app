@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:spiphoto_app/spi_colors.dart';
 import 'package:spiphoto_app/service/image_wp_info.dart';
 import 'package:extended_image/extended_image.dart';
 import 'package:spiphoto_app/service/wallpaper_screen.dart';
@@ -41,7 +42,6 @@ class _PageViewScreenState extends State<PageViewScreen> {
     super.dispose();
   }
 
-  // Getter pratique pour l'index courant
   int get _currentIndex => _pageController.hasClients
       ? (_pageController.page?.round() ?? widget.initialIndex)
       : widget.initialIndex;
@@ -49,6 +49,7 @@ class _PageViewScreenState extends State<PageViewScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: SpiColors.noir,
       body: OrientationBuilder(
         builder: (context, orientation) {
           final screenWidth = MediaQuery.of(context).size.width;
@@ -58,6 +59,7 @@ class _PageViewScreenState extends State<PageViewScreen> {
 
           return Stack(
             children: [
+              // ── PageView des photos ──────────────────────────────────────
               SizedBox(
                 height: double.infinity,
                 child: PageView.builder(
@@ -73,42 +75,66 @@ class _PageViewScreenState extends State<PageViewScreen> {
                               vertical: screenHeight * 0.03,
                             ),
                             decoration: BoxDecoration(
+                              // Bordure olive — cohérence palette
                               border: Border.all(
-                                color: Colors.white,
-                                width: 5.0,
+                                color: SpiColors.olive,
+                                width: 3.0,
                               ),
                               borderRadius: BorderRadius.circular(15.0),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.5),
+                                  blurRadius: 16,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
                             ),
-                            child: AspectRatio(
-                              aspectRatio: aspectRatio,
-                              child: ExtendedImage.network(
-                                widget.imageInfos[index].landscapeUrl,
-                                fit: BoxFit.cover,
-                                enableSlideOutPage: true,
-                                mode: ExtendedImageMode.gesture,
-                                loadStateChanged: (ExtendedImageState state) {
-                                  switch (state.extendedImageLoadState) {
-                                    case LoadState.loading:
-                                      return const Center(
-                                          child: CircularProgressIndicator());
-                                    case LoadState.completed:
-                                      return null;
-                                    case LoadState.failed:
-                                      return const Center(
-                                          child: Icon(Icons.error,
-                                              color: Colors.red));
-                                  }
-                                },
-                                initGestureConfigHandler: (state) =>
-                                    GestureConfig(
-                                  minScale: 1.0,
-                                  animationMinScale: 0.8,
-                                  maxScale: 3.0,
-                                  animationMaxScale: 3.5,
-                                  speed: 1.0,
-                                  inertialSpeed: 100.0,
-                                  initialScale: 1.0,
-                                  inPageView: false,
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(13.0),
+                              child: AspectRatio(
+                                aspectRatio: aspectRatio,
+                                child: ExtendedImage.network(
+                                  widget.imageInfos[index].landscapeUrl,
+                                  fit: BoxFit.cover,
+                                  enableSlideOutPage: true,
+                                  mode: ExtendedImageMode.gesture,
+                                  loadStateChanged: (ExtendedImageState state) {
+                                    switch (state.extendedImageLoadState) {
+                                      case LoadState.loading:
+                                        return Container(
+                                          color: SpiColors.surface,
+                                          child: const Center(
+                                            child: CircularProgressIndicator(
+                                              color: SpiColors.mauve,
+                                            ),
+                                          ),
+                                        );
+                                      case LoadState.completed:
+                                        return null;
+                                      case LoadState.failed:
+                                        return Container(
+                                          color: SpiColors.surfaceAlt,
+                                          child: const Center(
+                                            child: Icon(
+                                              Icons.broken_image_outlined,
+                                              color: SpiColors.texteMuted,
+                                              size: 48,
+                                            ),
+                                          ),
+                                        );
+                                    }
+                                  },
+                                  initGestureConfigHandler: (state) =>
+                                      GestureConfig(
+                                    minScale: 1.0,
+                                    animationMinScale: 0.8,
+                                    maxScale: 3.0,
+                                    animationMaxScale: 3.5,
+                                    speed: 1.0,
+                                    inertialSpeed: 100.0,
+                                    initialScale: 1.0,
+                                    inPageView: false,
+                                  ),
                                 ),
                               ),
                             ),
@@ -120,50 +146,88 @@ class _PageViewScreenState extends State<PageViewScreen> {
                 ),
               ),
 
-              // Bouton retour
+              // ── Bouton retour ────────────────────────────────────────────
               Positioned(
                 top: 16.0,
                 left: 16.0,
-                child: IconButton(
-                  icon: const Icon(Icons.arrow_back, color: Colors.white),
-                  onPressed: () => Navigator.pop(context),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: SpiColors.surface.withValues(alpha: 0.7),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: IconButton(
+                    icon: const Icon(
+                      Icons.arrow_back_ios_new,
+                      color: SpiColors.texte,
+                      size: 20,
+                    ),
+                    onPressed: () => Navigator.pop(context),
+                  ),
                 ),
               ),
 
-              // Boutons d'action
+              // ── Compteur de photos ───────────────────────────────────────
+              Positioned(
+                top: 24.0,
+                right: 16.0,
+                child: AnimatedBuilder(
+                  animation: _pageController,
+                  builder: (context, _) {
+                    return Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: SpiColors.surface.withValues(alpha: 0.7),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        '${_currentIndex + 1} / ${widget.imageInfos.length}',
+                        style: const TextStyle(
+                          color: SpiColors.texte,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 1.0,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+
+              // ── Boutons d'action ─────────────────────────────────────────
               Positioned(
                 bottom: screenHeight * 0.05,
                 right: screenWidth * 0.05,
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    // Fond d'écran
                     FloatingActionButton(
                       heroTag: 'wallpaper',
-                      backgroundColor: Colors.blue,
+                      backgroundColor: SpiColors.olive,
                       tooltip: 'Définir comme fond d\'écran',
                       onPressed: () {
-                        final String currentImageUrl =
+                        final String url =
                             widget.imageInfos[_currentIndex].landscapeUrl;
-                        // 👈 context passé en paramètre (nouvelle signature)
-                        _wallpaperScreen.showWallpaperDialog(
-                            context, currentImageUrl);
+                        _wallpaperScreen.showWallpaperDialog(context, url);
                       },
-                      child: const Icon(Icons.wallpaper, color: Colors.white),
+                      child:
+                          const Icon(Icons.wallpaper, color: SpiColors.texte),
                     ),
                     const SizedBox(height: 16.0),
+                    // Partager
                     FloatingActionButton(
                       heroTag: 'share',
-                      backgroundColor: Colors.pink,
+                      backgroundColor: SpiColors.mauve,
                       tooltip: 'Partager',
                       onPressed: () {
-                        final String currentImageUrl =
+                        final String url =
                             widget.imageInfos[_currentIndex].landscapeUrl;
-                        final String currentDescription =
+                        final String desc =
                             widget.imageInfos[_currentIndex].description;
-                        _shareService.shareImageOnInstagram(
-                            context, currentImageUrl, currentDescription);
+                        _shareService.shareImageOnInstagram(context, url, desc);
                       },
-                      child: const Icon(Icons.share, color: Colors.white),
+                      child: const Icon(Icons.share, color: SpiColors.texte),
                     ),
                   ],
                 ),
