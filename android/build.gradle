@@ -10,14 +10,12 @@ buildscript {
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
     }
 }
-
 allprojects {
     repositories {
         google()
         mavenCentral()
     }
 }
-
 rootProject.buildDir = '../build'
 subprojects {
     project.buildDir = "${rootProject.buildDir}/${project.name}"
@@ -25,7 +23,21 @@ subprojects {
 subprojects {
     project.evaluationDependsOn(':app')
 }
-
+subprojects {
+    if (project.state.executed) {
+        // Projet déjà évalué (cas de :app via evaluationDependsOn) : on applique direct
+        if (project.hasProperty('android')) {
+            project.android.ndkVersion = "27.0.12077973"
+        }
+    } else {
+        // Cas normal : on attend la fin de l'évaluation pour écraser la valeur du plugin
+        afterEvaluate {
+            if (project.hasProperty('android')) {
+                project.android.ndkVersion = "27.0.12077973"
+            }
+        }
+    }
+}
 tasks.register("clean", Delete) {
     delete rootProject.buildDir
 }
