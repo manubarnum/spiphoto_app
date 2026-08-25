@@ -3,8 +3,10 @@ import 'package:spiphoto_app/spi_colors.dart';
 import 'package:spiphoto_app/service/acces_wordpress.dart';
 import 'package:spiphoto_app/service/image_wp_info.dart';
 
+/// Écran principal qui affiche la liste des albums.
+/// Chaque carte peut afficher les images de l'album.
 class MyList extends StatefulWidget {
-  const MyList({Key? key}) : super(key: key);
+  const MyList({super.key});
 
   @override
   _MyListState createState() => _MyListState();

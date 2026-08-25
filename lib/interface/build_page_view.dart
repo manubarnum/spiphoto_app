@@ -5,9 +5,8 @@ import 'package:extended_image/extended_image.dart';
 import 'package:spiphoto_app/service/wallpaper_screen.dart';
 import 'package:spiphoto_app/service/share_service.dart';
 
-// Fonction de navigation conservée pour compatibilité avec build_grid_view.dart
-Widget buildPageView(
-    BuildContext context, List<ImageWpInfo> imageInfos, int initialIndex) {
+// Fonction de navigation conservée pour la compatibilité avec build_grid_view.dart
+Widget buildPageView(BuildContext context, List<ImageWpInfo> imageInfos, int initialIndex) {
   return PageViewScreen(imageInfos: imageInfos, initialIndex: initialIndex);
 }
 
