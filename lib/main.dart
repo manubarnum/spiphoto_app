@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:spiphoto_app/spi_colors.dart';
 import 'package:spiphoto_app/interface/appbar_accueil.dart';
 import 'package:spiphoto_app/interface/album_list.dart';
@@ -7,9 +8,12 @@ import 'package:spiphoto_app/interface/album_details_screen.dart';
 import 'package:spiphoto_app/interface/favoris_screen.dart';
 import 'package:spiphoto_app/interface/club_screen.dart';
 import 'package:spiphoto_app/service/acces_wordpress.dart';
+import 'package:spiphoto_app/service/auth_service.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp();
+  await AuthService.instance.initialize();
   // Barre de statut transparente — immersif magazine
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(

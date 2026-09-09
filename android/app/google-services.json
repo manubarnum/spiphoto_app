@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "786434708412",
+    "project_id": "spiphoto-app-b027a",
+    "storage_bucket": "spiphoto-app-b027a.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:786434708412:android:12c14002592910912ed1b9",
+        "android_client_info": {
+          "package_name": "fr.enkirche.spiphoto_app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "786434708412-n6aj55i5taldp0olfcb2fuauohbfsojf.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "fr.enkirche.spiphoto_app",
+            "certificate_hash": "2b4b205f6b2847dbe1016d8b896a7f123a2060f0"
+          }
+        },
+        {
+          "client_id": "786434708412-g527q9pgaii7mqfs4v9j3srpagsdiq33.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAt3RdiAq6qPzhunRZWirADZd3EakB8rd8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "786434708412-g527q9pgaii7mqfs4v9j3srpagsdiq33.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
