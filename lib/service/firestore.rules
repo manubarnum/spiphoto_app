@@ -1,0 +1,50 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSpiphotoUser() {
+      return request.auth != null
+        && request.auth.token.email.matches('.*@spiphoto[.]fr$');
+    }
+
+    // Un événement favori par paire {uid}_{mediaId}
+    match /favoriteEvents/{eventId} {
+      allow read: if isSpiphotoUser();
+
+      allow create: if isSpiphotoUser()
+        && request.resource.data.userId == request.auth.uid
+        && eventId == request.auth.uid + '_' + string(request.resource.data.mediaId);
+
+      allow delete: if isSpiphotoUser()
+        && resource.data.userId == request.auth.uid;
+
+      allow update: if false; // jamais de modif, seulement create/delete
+    }
+
+    // Compteur agrégé par photo
+    match /photoStats/{mediaId} {
+      allow read: if isSpiphotoUser();
+
+      allow create: if isSpiphotoUser()
+        && request.resource.data.favoriteCount == 1;
+
+      allow update: if isSpiphotoUser()
+        && request.resource.data.favoriteCount >= 0
+        && (
+          request.resource.data.favoriteCount == resource.data.favoriteCount + 1 ||
+          request.resource.data.favoriteCount == resource.data.favoriteCount - 1
+        );
+
+      allow delete: if false;
+    }
+
+    // Ancienne collection : plus utilisée, on ferme tout
+    match /favorites/{userId} {
+      allow read, write: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

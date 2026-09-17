@@ -1,9 +1,13 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:spiphoto_app/spi_colors.dart';
 import 'package:spiphoto_app/service/image_wp_info.dart';
 import 'package:extended_image/extended_image.dart';
 import 'package:spiphoto_app/service/wallpaper_screen.dart';
 import 'package:spiphoto_app/service/share_service.dart';
+import 'package:spiphoto_app/service/auth_service.dart';
+import 'package:spiphoto_app/service/favorites_service.dart';
 
 // Fonction de navigation conservée pour la compatibilité avec build_grid_view.dart
 Widget buildPageView(BuildContext context, List<ImageWpInfo> imageInfos, int initialIndex) {
@@ -29,21 +33,50 @@ class _PageViewScreenState extends State<PageViewScreen> {
   final WallpaperScreen _wallpaperScreen = WallpaperScreen();
   final ShareService _shareService = ShareService();
 
+  // URLs favorites de l'utilisateur connecté — tenu à jour en temps réel
+  // pour que le cœur reflète l'état réel même si le favori a été modifié
+  // depuis un autre écran (ex. retiré depuis l'onglet Mes Favoris).
+  Set<String> _favoriteUrls = {};
+  StreamSubscription<List<String>>? _favoritesSubscription;
+
   @override
   void initState() {
     super.initState();
     _pageController = PageController(initialPage: widget.initialIndex);
+    _favoritesSubscription =
+        FavoritesService.instance.watchFavorites().listen((urls) {
+      if (mounted) setState(() => _favoriteUrls = urls.toSet());
+    });
   }
 
   @override
   void dispose() {
     _pageController.dispose();
+    _favoritesSubscription?.cancel();
     super.dispose();
   }
 
   int get _currentIndex => _pageController.hasClients
       ? (_pageController.page?.round() ?? widget.initialIndex)
       : widget.initialIndex;
+
+  Future<void> _toggleFavorite() async {
+    if (AuthService.instance.currentUser == null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Connecte-toi depuis l\'onglet Mes Favoris pour ajouter des photos à tes favoris.',
+          ),
+        ),
+      );
+      return;
+    }
+
+    final String url = widget.imageInfos[_currentIndex].landscapeUrl;
+    await FavoritesService.instance
+        .toggleFavorite(url, _favoriteUrls.contains(url));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -200,6 +233,29 @@ class _PageViewScreenState extends State<PageViewScreen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    // Favori — reflète l'état réel via le flux Firestore,
+                    // se met aussi à jour au fil du swipe grâce à l'écoute
+                    // du PageController.
+                    AnimatedBuilder(
+                      animation: _pageController,
+                      builder: (context, _) {
+                        final bool isFav = _favoriteUrls.contains(
+                            widget.imageInfos[_currentIndex].landscapeUrl);
+                        return FloatingActionButton(
+                          heroTag: 'favorite',
+                          backgroundColor: SpiColors.surface,
+                          tooltip: isFav
+                              ? 'Retirer des favoris'
+                              : 'Ajouter aux favoris',
+                          onPressed: _toggleFavorite,
+                          child: Icon(
+                            isFav ? Icons.favorite : Icons.favorite_border,
+                            color: SpiColors.mauve,
+                          ),
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 16.0),
                     // Fond d'écran
                     FloatingActionButton(
                       heroTag: 'wallpaper',

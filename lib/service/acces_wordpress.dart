@@ -61,21 +61,19 @@ Future<List<ImageWpInfo>> extractImagesFromHtml(String htmlString) async {
       if (src == null || src.isEmpty) continue;
 
       // ── 1. URL plein format (landscapeUrl) ──────────────────────────────
-      // WordPress place des vignettes 150x150 dans src — on retire le suffixe
-      final String landscapeUrl =
-          src.contains('-150x150') ? src.replaceAll('-150x150', '') : src;
+      // WordPress place un suffixe de taille dans src (ex. -150x150 ou
+      // -300x300 selon le réglage "Taille des vignettes" du site, qui a
+      // changé au fil du temps) — on le retire par motif pour retrouver
+      // l'original, quelle que soit la taille utilisée.
+      final String landscapeUrl = stripWpImageSize(src);
 
       // ── 2. Vignette optimisée ────────────────────────────────────────────
-      // On reconstruit manuellement l'URL 600x600 depuis le src 150x150.
-      // Si WordPress ne l'a pas générée, le errorBuilder dans Image.network
-      // affichera le fallbackUrl 320x320 (garanti présent dans le srcset).
-      final String thumbnailUrl = src.contains('-150x150')
-          ? src.replaceAll('-150x150', '-600x600')
-          : src;
+      // -320x320 est la plus grande taille carrée réellement générée par
+      // WordPress sur ce site (vérifié : -600x600 n'existe pour aucune
+      // image, ancienne ou récente).
+      final String thumbnailUrl = insertWpImageSize(landscapeUrl, '-320x320');
 
-      final String fallbackUrl = src.contains('-150x150')
-          ? src.replaceAll('-150x150', '-320x320')
-          : src;
+      final String fallbackUrl = landscapeUrl;
 
       // ── 3. Description ──────────────────────────────────────────────────
       final String title = element.attributes['title'] ?? "";
