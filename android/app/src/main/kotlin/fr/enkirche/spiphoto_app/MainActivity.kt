@@ -10,7 +10,6 @@ import io.flutter.plugin.common.MethodChannel
 import kotlinx.coroutines.*
 import java.io.File
 import java.io.FileOutputStream
-import java.io.InputStream
 import java.net.HttpURLConnection
 import java.net.URL
 
@@ -50,22 +49,27 @@ class MainActivity: FlutterActivity() {
     // Fonction suspendue pour définir le fond d'écran avec coroutines
     private suspend fun setWallpaper(imageUrl: String, wallpaperType: Int): Boolean {
         return withContext(Dispatchers.IO) {
+            var bitmap: Bitmap? = null
             try {
-                // Télécharger l'image depuis l'URL
-                val url = URL(imageUrl)
-                val connection: HttpURLConnection = url.openConnection() as HttpURLConnection
+                // Télécharger l'image depuis l'URL — connexion + flux fermés
+                // via .use{} même en cas d'exception pendant le décodage.
+                val connection: HttpURLConnection = URL(imageUrl).openConnection() as HttpURLConnection
                 connection.doInput = true
                 connection.connect()
-                val input: InputStream = connection.inputStream
-                val bitmap = BitmapFactory.decodeStream(input)
+                try {
+                    bitmap = connection.inputStream.use { input -> BitmapFactory.decodeStream(input) }
+                } finally {
+                    connection.disconnect()
+                }
+
+                if (bitmap == null) return@withContext false
 
                 // Sauvegarder l'image temporairement dans un répertoire dédié à l'application
                 val directory = getExternalFilesDir(null)
                 val file = File(directory, "wallpaper_temp.jpg")
-                val outputStream = FileOutputStream(file)
-                bitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
-                outputStream.flush()
-                outputStream.close()
+                FileOutputStream(file).use { outputStream ->
+                    bitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
+                }
 
                 // Définir le fond d'écran
                 val wallpaperManager = WallpaperManager.getInstance(applicationContext)
@@ -78,6 +82,10 @@ class MainActivity: FlutterActivity() {
             } catch (e: Exception) {
                 e.printStackTrace()
                 false // Échec
+            } finally {
+                // setBitmap() copie les pixels en interne, donc on peut
+                // libérer la mémoire native du bitmap ici sans risque.
+                bitmap?.recycle()
             }
         }
     }
