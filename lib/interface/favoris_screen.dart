@@ -94,7 +94,7 @@ class _LoggedOutViewState extends State<_LoggedOutView> {
             label:
                 Text(_isLoading ? 'Connexion...' : 'Se connecter avec Google'),
             style: ElevatedButton.styleFrom(
-              backgroundColor: SpiColors.mauve,
+              backgroundColor: SpiColors.olive,
               foregroundColor: SpiColors.texte,
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
             ),
@@ -114,53 +114,107 @@ class _LoggedInView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        // ── En-tête : compte connecté + déconnexion ──────────────────────
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-          child: Row(
-            children: [
-              CircleAvatar(
-                radius: 16,
-                backgroundColor: SpiColors.surfaceAlt,
-                backgroundImage:
-                    user.photoURL != null ? NetworkImage(user.photoURL!) : null,
-                child: user.photoURL == null
-                    ? const Icon(Icons.person,
-                        size: 18, color: SpiColors.texteMuted)
-                    : null,
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  user.email ?? '',
-                  style: Theme.of(context).textTheme.bodySmall,
-                  overflow: TextOverflow.ellipsis,
+    return StreamBuilder<List<String>>(
+      stream: FavoritesService.instance.watchFavorites(),
+      builder: (context, snapshot) {
+        final bool enChargement =
+            snapshot.connectionState == ConnectionState.waiting;
+        final List<String> urls = snapshot.data ?? [];
+
+        // Tout défile d'un bloc : compte, titre, puis grille.
+        return CustomScrollView(
+          slivers: [
+            // ── Compte connecté + déconnexion ──────────────────────────
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 14, 4, 4),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 16,
+                      backgroundColor: SpiColors.surfaceHigh,
+                      backgroundImage: user.photoURL != null
+                          ? NetworkImage(user.photoURL!)
+                          : null,
+                      child: user.photoURL == null
+                          ? const Icon(Icons.person,
+                              size: 18, color: SpiColors.texteMuted)
+                          : null,
+                    ),
+                    const SizedBox(width: 11),
+                    Expanded(
+                      child: Text(
+                        user.email ?? '',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: SpiColors.texteMuted,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.logout,
+                          color: SpiColors.texteMuted, size: 20),
+                      tooltip: 'Se déconnecter',
+                      onPressed: () => AuthService.instance.signOut(),
+                    ),
+                  ],
                 ),
               ),
-              IconButton(
-                icon: const Icon(Icons.logout, color: SpiColors.texteMuted),
-                tooltip: 'Se déconnecter',
-                onPressed: () => AuthService.instance.signOut(),
-              ),
-            ],
-          ),
-        ),
-        // ── Grille des favoris (temps réel) ───────────────────────────────
-        Expanded(
-          child: StreamBuilder<List<String>>(
-            stream: FavoritesService.instance.watchFavorites(),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(
-                  child: CircularProgressIndicator(color: SpiColors.mauve),
-                );
-              }
+            ),
 
-              final urls = snapshot.data ?? [];
-              if (urls.isEmpty) {
-                return Center(
+            // ── Titre + compteur ───────────────────────────────────────
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.baseline,
+                  textBaseline: TextBaseline.alphabetic,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Mes favoris',
+                        style: Theme.of(context).textTheme.headlineSmall,
+                      ),
+                    ),
+                    if (!enChargement) ...[
+                      const SizedBox(width: 12),
+                      Text(
+                        urls.length > 1
+                            ? '${urls.length} photos'
+                            : '${urls.length} photo',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: SpiColors.mauveClair,
+                              fontWeight: FontWeight.w600,
+                            ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+
+            // ── Filet ──────────────────────────────────────────────────
+            SliverToBoxAdapter(
+              child: Container(
+                margin: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                height: 1,
+                color: SpiColors.olive.withValues(alpha: 0.3),
+              ),
+            ),
+
+            if (enChargement)
+              const SliverFillRemaining(
+                hasScrollBody: false,
+                child: Center(
+                  child: CircularProgressIndicator(color: SpiColors.mauve),
+                ),
+              )
+            else if (urls.isEmpty)
+              SliverFillRemaining(
+                hasScrollBody: false,
+                child: Center(
                   child: Padding(
                     padding: const EdgeInsets.all(24.0),
                     child: Column(
@@ -177,21 +231,23 @@ class _LoggedInView extends StatelessWidget {
                       ],
                     ),
                   ),
-                );
-              }
-
-              // Reconstruit un ImageWpInfo complet pour chaque URL favorite,
-              // puis réutilise la grille standard de l'app (mêmes cartes,
-              // mêmes bordures, même navigation vers la visionneuse plein écran).
-              final imageInfos =
-                  urls.map((url) => ImageWpInfo.fromFavoriteUrl(url)).toList();
-              return SingleChildScrollView(
-                child: buildGridView(context, imageInfos),
-              );
-            },
-          ),
-        ),
-      ],
+                ),
+              )
+            else
+              // ── Grille des favoris (temps réel), bordure violette ────
+              // Reconstruit un ImageWpInfo complet pour chaque URL
+              // favorite, puis réutilise la grille standard de l'app.
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(15, 0, 15, 24),
+                sliver: buildSliverGridView(
+                  context,
+                  urls.map((url) => ImageWpInfo.fromFavoriteUrl(url)).toList(),
+                  bordure: SpiColors.mauve.withValues(alpha: 0.55),
+                ),
+              ),
+          ],
+        );
+      },
     );
   }
 }

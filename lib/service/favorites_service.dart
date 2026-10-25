@@ -43,6 +43,11 @@ class FavoritesService {
   /// favori est ajouté ou retiré (même depuis un autre écran de l'app),
   /// ce flux émet automatiquement la nouvelle liste.
   /// Retourne un flux vide si personne n'est connecté.
+  ///
+  /// Les favoris sont triés du plus récent au plus ancien (createdAt). Le
+  /// tri se fait ici plutôt que par orderBy() : combiné au where() sur
+  /// userId, il exigerait un index composite Firestore. Un favori tout juste
+  /// ajouté n'a pas encore son horodatage serveur (null) : il passe en tête.
   Stream<List<String>> watchFavorites() {
     final uid = _uid;
     if (uid == null) return const Stream.empty();
@@ -50,10 +55,19 @@ class FavoritesService {
     return _eventsCollection
         .where('userId', isEqualTo: uid)
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => doc.data()['photoUrl'] as String?)
-            .whereType<String>()
-            .toList());
+        .map((snapshot) {
+      final docs = snapshot.docs
+          .where((doc) => doc.data()['photoUrl'] is String)
+          .toList();
+      docs.sort((a, b) {
+        final Timestamp? dateA = a.data()['createdAt'] as Timestamp?;
+        final Timestamp? dateB = b.data()['createdAt'] as Timestamp?;
+        if (dateA == null) return dateB == null ? 0 : -1;
+        if (dateB == null) return 1;
+        return dateB.compareTo(dateA);
+      });
+      return docs.map((doc) => doc.data()['photoUrl'] as String).toList();
+    });
   }
 
   /// Lecture PONCTUELLE (une seule fois, pas de mise à jour automatique).
@@ -62,7 +76,8 @@ class FavoritesService {
     final uid = _uid;
     if (uid == null) return <String>[];
 
-    final snapshot = await _eventsCollection.where('userId', isEqualTo: uid).get();
+    final snapshot =
+        await _eventsCollection.where('userId', isEqualTo: uid).get();
     return snapshot.docs
         .map((doc) => doc.data()['photoUrl'] as String?)
         .whereType<String>()

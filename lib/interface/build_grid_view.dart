@@ -13,27 +13,17 @@ SliverGridDelegate _gridDelegate(BuildContext context) {
   );
 }
 
-Widget buildGridView(BuildContext context, List<ImageWpInfo> imageInfos) {
-  return GridView.builder(
-    padding: const EdgeInsets.symmetric(horizontal: 15.0, vertical: 10.0),
-    shrinkWrap: true,
-    physics: const NeverScrollableScrollPhysics(),
-    gridDelegate: _gridDelegate(context),
-    itemCount: imageInfos.length,
-    itemBuilder: (context, index) =>
-        _VignettePhoto(imageInfos: imageInfos, index: index),
-  );
-}
-
-/// Variante sliver de [buildGridView], à placer dans un CustomScrollView.
-/// Les vignettes sont construites à la demande : sur un album d'une
-/// centaine de photos, seules celles proches de l'écran sont chargées.
-/// [legende] et [auteur] sont transmis à la visionneuse.
+/// Grille de photos à placer dans un CustomScrollView. Les vignettes sont
+/// construites à la demande : sur un album d'une centaine de photos, seules
+/// celles proches de l'écran sont chargées.
+/// [legende] et [auteur] sont transmis à la visionneuse ; [bordure] change
+/// la couleur du contour (olive par défaut, violet pour les favoris).
 Widget buildSliverGridView(
   BuildContext context,
   List<ImageWpInfo> imageInfos, {
   String? legende,
   String? auteur,
+  Color? bordure,
 }) {
   return SliverGrid.builder(
     gridDelegate: _gridDelegate(context),
@@ -43,6 +33,7 @@ Widget buildSliverGridView(
       index: index,
       legende: legende,
       auteur: auteur,
+      bordure: bordure ?? SpiColors.olive.withValues(alpha: 0.5),
     ),
   );
 }
@@ -52,10 +43,12 @@ class _VignettePhoto extends StatelessWidget {
   final int index;
   final String? legende;
   final String? auteur;
+  final Color bordure;
 
   const _VignettePhoto({
     required this.imageInfos,
     required this.index,
+    required this.bordure,
     this.legende,
     this.auteur,
   });
@@ -64,8 +57,9 @@ class _VignettePhoto extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () {
-        Navigator.push(
-          context,
+        // Navigateur racine : la visionneuse recouvre toujours la barre
+        // d'accueil et la nav basse, y compris depuis un onglet.
+        Navigator.of(context, rootNavigator: true).push(
           MaterialPageRoute(
             builder: (context) => buildPageView(
               context,
@@ -79,10 +73,7 @@ class _VignettePhoto extends StatelessWidget {
       },
       child: Container(
         decoration: BoxDecoration(
-          border: Border.all(
-            color: SpiColors.olive.withValues(alpha: 0.5),
-            width: 1.5,
-          ),
+          border: Border.all(color: bordure, width: 1.5),
           borderRadius: BorderRadius.circular(12.0),
           boxShadow: [
             BoxShadow(
