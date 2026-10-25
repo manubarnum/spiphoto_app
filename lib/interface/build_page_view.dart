@@ -1,5 +1,4 @@
-import 'dart:async';
-
+import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:spiphoto_app/spi_colors.dart';
@@ -59,25 +58,28 @@ class _PageViewScreenState extends State<PageViewScreen> {
   // pour que le cœur reflète l'état réel même si le favori a été modifié
   // depuis un autre écran (ex. retiré depuis l'onglet Mes Favoris).
   Set<String> _favoris = {};
-  StreamSubscription<List<ImageWpInfo>>? _favoritesSubscription;
+  final ValueListenable<List<ImageWpInfo>?> _favorisPartages =
+      FavoritesService.instance.favoris;
 
   @override
   void initState() {
     super.initState();
     _currentIndex = widget.initialIndex;
     _pageController = PageController(initialPage: widget.initialIndex);
-    _favoritesSubscription =
-        FavoritesService.instance.watchFavorites().listen((photos) {
-      if (mounted) {
-        setState(() => _favoris = photos.map((p) => p.mediaId).toSet());
-      }
-    });
+    _favoris = _idsFavoris();
+    _favorisPartages.addListener(_majFavoris);
   }
+
+  Set<String> _idsFavoris() => (_favorisPartages.value ?? const <ImageWpInfo>[])
+      .map((p) => p.mediaId)
+      .toSet();
+
+  void _majFavoris() => setState(() => _favoris = _idsFavoris());
 
   @override
   void dispose() {
     _pageController.dispose();
-    _favoritesSubscription?.cancel();
+    _favorisPartages.removeListener(_majFavoris);
     super.dispose();
   }
 

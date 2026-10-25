@@ -42,12 +42,11 @@ class _LoggedInView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<List<ImageWpInfo>>(
-      stream: FavoritesService.instance.watchFavorites(),
-      builder: (context, snapshot) {
-        final bool enChargement =
-            snapshot.connectionState == ConnectionState.waiting;
-        final List<ImageWpInfo> photos = snapshot.data ?? [];
+    return ValueListenableBuilder<List<ImageWpInfo>?>(
+      valueListenable: FavoritesService.instance.favoris,
+      builder: (context, favoris, _) {
+        final bool enChargement = favoris == null;
+        final List<ImageWpInfo> photos = favoris ?? const [];
 
         // Tout défile d'un bloc : compte, titre, puis grille.
         return CustomScrollView(

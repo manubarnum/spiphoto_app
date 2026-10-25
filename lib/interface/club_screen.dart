@@ -1,7 +1,6 @@
-import 'dart:async';
-
 import 'package:extended_image/extended_image.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/material.dart';
 import 'package:spiphoto_app/spi_colors.dart';
 import 'package:spiphoto_app/service/auth_service.dart';
@@ -54,22 +53,25 @@ class _FilDuClubState extends State<_FilDuClub> {
   // Identifiants des favoris de l'utilisateur, pour l'état du cœur de
   // chaque entrée.
   Set<String> _mesFavoris = {};
-  StreamSubscription<List<ImageWpInfo>>? _abonnement;
+  final ValueListenable<List<ImageWpInfo>?> _favoris =
+      FavoritesService.instance.favoris;
 
   @override
   void initState() {
     super.initState();
     _fil = FavoritesService.instance.getFavorisDuClub(tri: _tri);
-    _abonnement = FavoritesService.instance.watchFavorites().listen((photos) {
-      if (mounted) {
-        setState(() => _mesFavoris = photos.map((p) => p.mediaId).toSet());
-      }
-    });
+    _mesFavoris = _idsFavoris();
+    _favoris.addListener(_majFavoris);
   }
+
+  Set<String> _idsFavoris() =>
+      (_favoris.value ?? const <ImageWpInfo>[]).map((p) => p.mediaId).toSet();
+
+  void _majFavoris() => setState(() => _mesFavoris = _idsFavoris());
 
   @override
   void dispose() {
-    _abonnement?.cancel();
+    _favoris.removeListener(_majFavoris);
     super.dispose();
   }
 

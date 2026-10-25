@@ -1,6 +1,8 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/foundation.dart' show visibleForTesting;
+import 'package:flutter/foundation.dart';
 import 'package:spiphoto_app/service/image_wp_info.dart';
 
 /// Gère les favoris de l'utilisateur connecté, stockés dans Firestore.
@@ -19,7 +21,13 @@ import 'package:spiphoto_app/service/image_wp_info.dart';
 /// compteur associé restent toujours cohérents entre eux.
 class FavoritesService {
   // ── Singleton, même logique que pour AuthService ──────────────────────
-  FavoritesService._internal();
+  FavoritesService._internal() {
+    // Changement de compte : l'abonnement aux favoris de l'ancien compte est
+    // fermé ; celui du nouveau s'ouvrira au premier écran qui le demande.
+    FirebaseAuth.instance.authStateChanges().listen((User? user) {
+      if (user?.uid != _uidAbonne) _fermerAbonnement();
+    });
+  }
   static final FavoritesService instance = FavoritesService._internal();
 
   final FirebaseFirestore _db = FirebaseFirestore.instance;
@@ -34,20 +42,45 @@ class FavoritesService {
   // d'avoir toujours la valeur à jour si l'utilisateur se déconnecte/reconnecte.
   String? get _uid => FirebaseAuth.instance.currentUser?.uid;
 
-  /// Flux TEMPS RÉEL des photos favorites.
-  /// À utiliser avec un StreamBuilder dans favoris_screen.dart : dès qu'un
-  /// favori est ajouté ou retiré (même depuis un autre écran de l'app),
-  /// ce flux émet automatiquement la nouvelle liste.
-  /// Retourne un flux vide si personne n'est connecté.
+  final ValueNotifier<List<ImageWpInfo>?> _favoris = ValueNotifier(null);
+  StreamSubscription<List<ImageWpInfo>>? _abonnement;
+  String? _uidAbonne;
+
+  /// Photos favorites de l'utilisateur connecté, tenues à jour en TEMPS
+  /// RÉEL : dès qu'un favori est ajouté ou retiré (depuis n'importe quel
+  /// écran), la liste change. null tant que la première liste n'est pas
+  /// arrivée, ou si personne n'est connecté.
   ///
+  /// Un seul abonnement Firestore, partagé par tous les écrans (Mes favoris,
+  /// Club, visionneuse) : ouvert au premier accès, gardé jusqu'au changement
+  /// de compte. Ouvrir et fermer la visionneuse ne relance donc aucune
+  /// requête.
+  ValueListenable<List<ImageWpInfo>?> get favoris {
+    final uid = _uid;
+    if (uid != null && _abonnement == null) {
+      _uidAbonne = uid;
+      _abonnement = _requeteFavoris(uid).listen(
+        (photos) => _favoris.value = photos,
+        // Lecture refusée ou réseau absent : liste vide plutôt qu'un
+        // chargement sans fin.
+        onError: (Object _) => _favoris.value ??= const [],
+      );
+    }
+    return _favoris;
+  }
+
+  void _fermerAbonnement() {
+    _abonnement?.cancel();
+    _abonnement = null;
+    _uidAbonne = null;
+    _favoris.value = null;
+  }
+
   /// Les favoris sont triés du plus récent au plus ancien (createdAt). Le
   /// tri se fait ici plutôt que par orderBy() : combiné au where() sur
   /// userId, il exigerait un index composite Firestore. Un favori tout juste
   /// ajouté n'a pas encore son horodatage serveur (null) : il passe en tête.
-  Stream<List<ImageWpInfo>> watchFavorites() {
-    final uid = _uid;
-    if (uid == null) return const Stream.empty();
-
+  Stream<List<ImageWpInfo>> _requeteFavoris(String uid) {
     return _eventsCollection
         .where('userId', isEqualTo: uid)
         .snapshots()
