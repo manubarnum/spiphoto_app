@@ -100,11 +100,11 @@ class _FilDuClubState extends State<_FilDuClub> {
           album: f.albumTitle))
       .toList();
 
-  Future<void> _ouvrir(List<FavoriClub> fil, int index) async {
+  Future<void> _ouvrir(List<ImageWpInfo> photos, int index) async {
     final Set<String> avant = Set.of(_mesFavoris);
     await Navigator.of(context, rootNavigator: true).push(
       MaterialPageRoute(
-        builder: (context) => buildPageView(context, _photos(fil), index),
+        builder: (context) => buildPageView(context, photos, index),
       ),
     );
     // Des favoris ont pu changer dans la visionneuse : on reporte les écarts
@@ -183,6 +183,8 @@ class _FilDuClubState extends State<_FilDuClub> {
       future: _fil,
       builder: (context, snapshot) {
         final List<FavoriClub>? fil = snapshot.data;
+        // Une fois par construction, et non pour chaque entrée du fil.
+        final List<ImageWpInfo> photos = fil == null ? const [] : _photos(fil);
 
         return RefreshIndicator(
           color: context.spi.mauve,
@@ -287,12 +289,12 @@ class _FilDuClubState extends State<_FilDuClub> {
                       ),
                     ),
                     itemBuilder: (context, index) {
-                      final ImageWpInfo photo = _photos(fil)[index];
+                      final ImageWpInfo photo = photos[index];
                       return _EntreeClub(
                         favori: fil[index],
                         photo: photo,
                         estMonFavori: _mesFavoris.contains(photo.mediaId),
-                        onOuvrir: () => _ouvrir(fil, index),
+                        onOuvrir: () => _ouvrir(photos, index),
                         onFavori: () => _basculerFavori(photo),
                         onFondEcran: () => _fondEcran(photo),
                       );
