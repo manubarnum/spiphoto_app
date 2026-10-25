@@ -3,7 +3,10 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:spiphoto_app/spi_colors.dart';
 
 class MyAppBarAccueil extends StatelessWidget implements PreferredSizeWidget {
-  const MyAppBarAccueil({super.key});
+  /// Appelé au tap sur le logo : retour à l'accueil.
+  final VoidCallback? onLogoTap;
+
+  const MyAppBarAccueil({super.key, this.onLogoTap});
 
   Future<void> _launchSite(BuildContext context) async {
     final Uri url = Uri.parse('https://www.spiphoto.fr/');
@@ -29,12 +32,19 @@ class MyAppBarAccueil extends StatelessWidget implements PreferredSizeWidget {
         ),
       ),
 
-      // ── Logo à gauche ───────────────────────────────────────────────────
-      leading: Padding(
-        padding: const EdgeInsets.all(10.0),
-        child: Image.asset(
-          'assets/icons/mon_logo1.png',
-          fit: BoxFit.contain,
+      // ── Logo à gauche — retour à l'accueil ──────────────────────────────
+      leading: Tooltip(
+        message: 'Accueil',
+        child: InkWell(
+          onTap: onLogoTap,
+          customBorder: const CircleBorder(),
+          child: Padding(
+            padding: const EdgeInsets.all(10.0),
+            child: Image.asset(
+              'assets/icons/mon_logo1.png',
+              fit: BoxFit.contain,
+            ),
+          ),
         ),
       ),
 

@@ -122,11 +122,9 @@ class _MyListState extends State<MyList> {
     );
   }
 
-  // Navigateur racine : l'écran album recouvre la nav basse et la barre
-  // d'accueil, l'état de l'onglet est conservé au retour.
+  // Navigateur de l'onglet : l'album s'ouvre sous la nav basse.
   void _ouvrirAlbum(Album album) {
-    Navigator.of(context, rootNavigator: true)
-        .pushNamed('/album_details_screen', arguments: album);
+    Navigator.pushNamed(context, '/album_details_screen', arguments: album);
   }
 
   @override

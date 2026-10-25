@@ -38,17 +38,6 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: _buildTheme(),
       home: const ScaffoldWithNavigation(),
-      // Routes ouvertes par-dessus les onglets (sans nav basse ni barre
-      // d'accueil) : à pousser avec Navigator.of(context, rootNavigator: true).
-      onGenerateRoute: (settings) {
-        if (settings.name == '/album_details_screen') {
-          final album = settings.arguments as Album;
-          return MaterialPageRoute(
-            builder: (_) => AlbumDetailsScreen(album: album),
-          );
-        }
-        return null;
-      },
     );
   }
 
@@ -239,11 +228,45 @@ class _ScaffoldWithNavigationState extends State<ScaffoldWithNavigation> {
     return true; // ferme l'app si rien à dépiler
   }
 
+  // Ramène un onglet à sa page racine (ex. d'un album vers la liste).
+  void _revenirALaRacine(int index) {
+    _navigatorKeys[index].currentState?.popUntil((route) => route.isFirst);
+  }
+
+  // Logo de la barre d'accueil : retour à l'accueil depuis n'importe quel
+  // onglet, en refermant l'album éventuellement ouvert.
+  void _revenirAccueil() {
+    setState(() => _currentIndex = 0);
+    _revenirALaRacine(0);
+  }
+
+  void _surOnglet(int index) {
+    if (index == _currentIndex) {
+      _revenirALaRacine(index);
+    } else {
+      setState(() => _currentIndex = index);
+    }
+  }
+
+  // La barre d'accueil est portée par la page racine de chaque onglet, et
+  // non par le Scaffold global : un album s'ouvre ainsi dans l'onglet, avec
+  // sa propre barre de retour, en gardant la nav basse.
   Widget _buildNavigator(int index, Widget child) {
     return Navigator(
       key: _navigatorKeys[index],
       onGenerateRoute: (settings) {
-        return MaterialPageRoute(builder: (_) => child);
+        if (settings.name == '/album_details_screen') {
+          final album = settings.arguments as Album;
+          return MaterialPageRoute(
+            builder: (_) => AlbumDetailsScreen(album: album),
+          );
+        }
+        return MaterialPageRoute(
+          builder: (_) => Scaffold(
+            appBar: MyAppBarAccueil(onLogoTap: _revenirAccueil),
+            body: child,
+          ),
+        );
       },
     );
   }
@@ -258,7 +281,6 @@ class _ScaffoldWithNavigationState extends State<ScaffoldWithNavigation> {
         if (!didPop) _onPopInvoked();
       },
       child: Scaffold(
-        appBar: const MyAppBarAccueil(),
         body: IndexedStack(
           index: _currentIndex,
           children: [
@@ -272,7 +294,7 @@ class _ScaffoldWithNavigationState extends State<ScaffoldWithNavigation> {
         ),
         bottomNavigationBar: SpiBottomNav(
           currentIndex: _currentIndex,
-          onTap: (index) => setState(() => _currentIndex = index),
+          onTap: _surOnglet,
         ),
       ),
     );
