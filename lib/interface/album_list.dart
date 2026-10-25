@@ -22,6 +22,9 @@ class _MyListState extends State<MyList> {
   bool _finAtteinte = false;
 
   bool _chargementInitial = true;
+  // Première page en cours de (re)chargement : la suite attend, sinon le
+  // rechargement effacerait les pages ajoutées entre-temps.
+  bool _premierePageEnCours = false;
   Object? _erreurInitiale;
   bool _chargementSuite = false;
   bool _erreurSuite = false;
@@ -36,14 +39,32 @@ class _MyListState extends State<MyList> {
   @override
   void initState() {
     super.initState();
+    _demarrer();
+  }
+
+  /// Affiche d'abord la dernière première page enregistrée (lecture locale,
+  /// quelques millisecondes), puis la recharge depuis le réseau : un échec
+  /// réseau, hors ligne, la laisse alors affichée au lieu de l'écran
+  /// d'erreur.
+  Future<void> _demarrer() async {
+    final PageAlbums? page = await premierePageEnregistree();
+    if (!mounted) return;
+    if (page != null) {
+      setState(() {
+        _ajouter(page);
+        _chargementInitial = false;
+      });
+    }
     _chargerPremierePage();
   }
 
-  /// (Re)charge la première page. Au premier affichage, l'écran montre un
-  /// indicateur plein écran ; lors d'un tirer-pour-rafraîchir, la liste
-  /// actuelle reste visible et n'est remplacée qu'en cas de succès.
+  /// (Re)charge la première page. Au premier affichage, l'écran montre la
+  /// dernière première page enregistrée, ou à défaut un indicateur plein
+  /// écran ; ensuite, la liste actuelle reste visible et n'est remplacée
+  /// qu'en cas de succès.
   Future<void> _chargerPremierePage() async {
     final int generation = ++_generation;
+    _premierePageEnCours = true;
     try {
       final PageAlbums page = await fetchAlbums();
       if (!mounted || generation != _generation) return;
@@ -67,13 +88,19 @@ class _MyListState extends State<MyList> {
       }
     } finally {
       if (mounted && generation == _generation) {
+        _premierePageEnCours = false;
         setState(() => _chargementInitial = false);
       }
     }
   }
 
   Future<void> _chargerSuite() async {
-    if (_chargementSuite || _finAtteinte || _erreurSuite) return;
+    if (_premierePageEnCours ||
+        _chargementSuite ||
+        _finAtteinte ||
+        _erreurSuite) {
+      return;
+    }
     final int generation = _generation;
     setState(() => _chargementSuite = true);
     try {

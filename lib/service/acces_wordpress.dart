@@ -1,5 +1,7 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
+import 'package:path_provider/path_provider.dart';
 import 'package:spiphoto_app/service/image_wp_info.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -97,17 +99,62 @@ Future<PageAlbums> fetchAlbums({int page = 1}) async {
 
   if (response.statusCode == 200) {
     final List<dynamic> jsonList = jsonDecode(response.body);
-    final List<Album> albums =
-        jsonList.map((json) => Album.fromJson(json)).toList();
-    return PageAlbums(
-      albums: albums,
-      total:
-          int.tryParse(response.headers['x-wp-total'] ?? '') ?? albums.length,
-      totalPages:
-          int.tryParse(response.headers['x-wp-totalpages'] ?? '') ?? page,
-    );
+    final int? total = int.tryParse(response.headers['x-wp-total'] ?? '');
+    final int totalPages =
+        int.tryParse(response.headers['x-wp-totalpages'] ?? '') ?? page;
+    if (page == 1) {
+      await _enregistrerPremierePage(jsonList, total, totalPages);
+    }
+    return _pageAlbums(jsonList, total, totalPages);
   } else {
     throw Exception(
         'Impossible de charger les albums (${response.statusCode})');
+  }
+}
+
+PageAlbums _pageAlbums(List<dynamic> jsonList, int? total, int totalPages) {
+  final List<Album> albums =
+      jsonList.map((json) => Album.fromJson(json)).toList();
+  return PageAlbums(
+    albums: albums,
+    total: total ?? albums.length,
+    totalPages: totalPages,
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// COPIE LOCALE DE LA PREMIÈRE PAGE
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Dernière première page reçue, gardée sur l'appareil : l'accueil s'affiche
+/// aussitôt au lancement, même hors ligne, puis se met à jour depuis le
+/// réseau. Les vignettes, elles, sont dans le cache disque des images.
+Future<File> get _fichierPremierePage async =>
+    File('${(await getApplicationSupportDirectory()).path}/albums_page1.json');
+
+Future<void> _enregistrerPremierePage(
+    List<dynamic> jsonList, int? total, int totalPages) async {
+  try {
+    await (await _fichierPremierePage).writeAsString(jsonEncode({
+      'total': total,
+      'totalPages': totalPages,
+      'albums': jsonList,
+    }));
+  } catch (_) {
+    // Copie facultative : un échec d'écriture ne doit pas bloquer l'accueil.
+  }
+}
+
+/// La dernière première page enregistrée, ou null s'il n'y en a pas (premier
+/// lancement) ou si elle est illisible.
+Future<PageAlbums?> premierePageEnregistree() async {
+  try {
+    final File fichier = await _fichierPremierePage;
+    if (!fichier.existsSync()) return null;
+    final Map<String, dynamic> json = jsonDecode(await fichier.readAsString());
+    return _pageAlbums(json['albums'] as List<dynamic>, json['total'] as int?,
+        json['totalPages'] as int);
+  } catch (_) {
+    return null;
   }
 }
