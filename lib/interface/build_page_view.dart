@@ -55,11 +55,11 @@ class _PageViewScreenState extends State<PageViewScreen> {
   late int _currentIndex;
   final ShareService _shareService = ShareService();
 
-  // URLs favorites de l'utilisateur connecté — tenu à jour en temps réel
+  // Identifiants des favoris de l'utilisateur connecté — tenu à jour en temps réel
   // pour que le cœur reflète l'état réel même si le favori a été modifié
   // depuis un autre écran (ex. retiré depuis l'onglet Mes Favoris).
-  Set<String> _favoriteUrls = {};
-  StreamSubscription<List<String>>? _favoritesSubscription;
+  Set<String> _favoris = {};
+  StreamSubscription<List<ImageWpInfo>>? _favoritesSubscription;
 
   @override
   void initState() {
@@ -67,8 +67,10 @@ class _PageViewScreenState extends State<PageViewScreen> {
     _currentIndex = widget.initialIndex;
     _pageController = PageController(initialPage: widget.initialIndex);
     _favoritesSubscription =
-        FavoritesService.instance.watchFavorites().listen((urls) {
-      if (mounted) setState(() => _favoriteUrls = urls.toSet());
+        FavoritesService.instance.watchFavorites().listen((photos) {
+      if (mounted) {
+        setState(() => _favoris = photos.map((p) => p.mediaId).toSet());
+      }
     });
   }
 
@@ -94,9 +96,9 @@ class _PageViewScreenState extends State<PageViewScreen> {
       return;
     }
 
-    final String url = _photo.landscapeUrl;
-    await FavoritesService.instance
-        .toggleFavorite(url, _favoriteUrls.contains(url), albumTitle: _legende);
+    await FavoritesService.instance.toggleFavorite(
+        _photo, _favoris.contains(_photo.mediaId),
+        albumTitle: _legende);
   }
 
   // La légende reprend le titre de l'album : celui de l'écran album, sinon
@@ -116,7 +118,7 @@ class _PageViewScreenState extends State<PageViewScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final bool isFav = _favoriteUrls.contains(_photo.landscapeUrl);
+    final bool isFav = _favoris.contains(_photo.mediaId);
 
     // Écran toujours sombre (centré sur la photo), quel que soit le thème :
     // icônes claires dans la barre d'état.
@@ -135,8 +137,8 @@ class _PageViewScreenState extends State<PageViewScreen> {
               itemBuilder: (context, index) => Center(
                 child: AspectRatio(
                   aspectRatio: 2 / 3,
-                  child: _PhotoPleinCadre(
-                      url: widget.imageInfos[index].landscapeUrl),
+                  child:
+                      _PhotoPleinCadre(url: widget.imageInfos[index].ecranUrl),
                 ),
               ),
             ),

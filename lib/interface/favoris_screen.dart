@@ -42,12 +42,12 @@ class _LoggedInView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<List<String>>(
+    return StreamBuilder<List<ImageWpInfo>>(
       stream: FavoritesService.instance.watchFavorites(),
       builder: (context, snapshot) {
         final bool enChargement =
             snapshot.connectionState == ConnectionState.waiting;
-        final List<String> urls = snapshot.data ?? [];
+        final List<ImageWpInfo> photos = snapshot.data ?? [];
 
         // Tout défile d'un bloc : compte, titre, puis grille.
         return CustomScrollView(
@@ -110,9 +110,9 @@ class _LoggedInView extends StatelessWidget {
                     if (!enChargement) ...[
                       const SizedBox(width: 12),
                       Text(
-                        urls.length > 1
-                            ? '${urls.length} photos'
-                            : '${urls.length} photo',
+                        photos.length > 1
+                            ? '${photos.length} photos'
+                            : '${photos.length} photo',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               color: context.spi.accent,
                               fontWeight: FontWeight.w600,
@@ -140,7 +140,7 @@ class _LoggedInView extends StatelessWidget {
                   child: CircularProgressIndicator(color: context.spi.mauve),
                 ),
               )
-            else if (urls.isEmpty)
+            else if (photos.isEmpty)
               SliverFillRemaining(
                 hasScrollBody: false,
                 child: Center(
@@ -164,13 +164,12 @@ class _LoggedInView extends StatelessWidget {
               )
             else
               // ── Grille des favoris (temps réel), bordure violette ────
-              // Reconstruit un ImageWpInfo complet pour chaque URL
-              // favorite, puis réutilise la grille standard de l'app.
+              // Réutilise la grille standard de l'app.
               SliverPadding(
                 padding: const EdgeInsets.fromLTRB(15, 0, 15, 24),
                 sliver: buildSliverGridView(
                   context,
-                  urls.map((url) => ImageWpInfo.fromFavoriteUrl(url)).toList(),
+                  photos,
                   bordure: context.spi.mauve.withValues(alpha: 0.55),
                 ),
               ),

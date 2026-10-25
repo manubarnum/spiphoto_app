@@ -4,26 +4,15 @@ import 'package:spiphoto_app/service/acces_wordpress.dart';
 import 'package:spiphoto_app/service/image_wp_info.dart';
 import 'package:spiphoto_app/interface/build_grid_view.dart';
 
-class AlbumDetailsScreen extends StatefulWidget {
+class AlbumDetailsScreen extends StatelessWidget {
   final Album album;
 
   const AlbumDetailsScreen({Key? key, required this.album}) : super(key: key);
 
   @override
-  State<AlbumDetailsScreen> createState() => _AlbumDetailsScreenState();
-}
-
-class _AlbumDetailsScreenState extends State<AlbumDetailsScreen> {
-  late Future<List<ImageWpInfo>> _futureImages;
-
-  @override
-  void initState() {
-    super.initState();
-    _futureImages = extractImagesFromHtml(widget.album.content['rendered']);
-  }
-
-  @override
   Widget build(BuildContext context) {
+    final List<ImageWpInfo> imageInfos = album.images;
+
     return Scaffold(
       backgroundColor: context.spi.fond,
 
@@ -43,7 +32,7 @@ class _AlbumDetailsScreenState extends State<AlbumDetailsScreen> {
 
         // Titre = nom de l'album, tronqué si trop long
         title: Text(
-          widget.album.title,
+          album.title,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: TextStyle(
@@ -66,47 +55,9 @@ class _AlbumDetailsScreenState extends State<AlbumDetailsScreen> {
       ),
 
       // ── Corps ─────────────────────────────────────────────────────────
-      body: FutureBuilder<List<ImageWpInfo>>(
-        future: _futureImages,
-        builder: (context, snapshot) {
-          // Chargement
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(
-              child: CircularProgressIndicator(),
-            );
-          }
-
-          // Erreur
-          if (snapshot.hasError) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24.0),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.error_outline,
-                        color: SpiColors.erreur, size: 48),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Erreur de chargement',
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      '${snapshot.error}',
-                      style: Theme.of(context).textTheme.bodySmall,
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ),
-              ),
-            );
-          }
-
+      body: imageInfos.isEmpty
           // Aucune image
-          final List<ImageWpInfo>? imageInfos = snapshot.data;
-          if (imageInfos == null || imageInfos.isEmpty) {
-            return Center(
+          ? Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -119,80 +70,77 @@ class _AlbumDetailsScreenState extends State<AlbumDetailsScreen> {
                   ),
                 ],
               ),
-            );
-          }
-
+            )
           // Grille de photos
-          return CustomScrollView(
-            slivers: [
-              // En-tête : titre + nombre de photos
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 20, 16, 4),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.baseline,
-                    textBaseline: TextBaseline.alphabetic,
-                    children: [
-                      // Auteur à la suite du titre, sur la même ligne
-                      // de base, en métadonnée discrète.
-                      Expanded(
-                        child: Text.rich(
-                          TextSpan(
-                            text: widget.album.title,
-                            children: [
-                              if (widget.album.authorName != null)
-                                TextSpan(
-                                  text: '  par ${widget.album.authorName}',
-                                  style: TextStyle(
-                                    color: context.spi.encreSecondaire,
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w400,
-                                    letterSpacing: 0.4,
+          : CustomScrollView(
+              slivers: [
+                // En-tête : titre + nombre de photos
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 20, 16, 4),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.baseline,
+                      textBaseline: TextBaseline.alphabetic,
+                      children: [
+                        // Auteur à la suite du titre, sur la même ligne
+                        // de base, en métadonnée discrète.
+                        Expanded(
+                          child: Text.rich(
+                            TextSpan(
+                              text: album.title,
+                              children: [
+                                if (album.authorName != null)
+                                  TextSpan(
+                                    text: '  par ${album.authorName}',
+                                    style: TextStyle(
+                                      color: context.spi.encreSecondaire,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w400,
+                                      letterSpacing: 0.4,
+                                    ),
                                   ),
-                                ),
-                            ],
-                          ),
-                          style: Theme.of(context).textTheme.headlineSmall,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Text(
-                        imageInfos.length > 1
-                            ? '${imageInfos.length} photos'
-                            : '${imageInfos.length} photo',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: context.spi.accent,
-                              fontWeight: FontWeight.w600,
+                              ],
                             ),
-                      ),
-                    ],
+                            style: Theme.of(context).textTheme.headlineSmall,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Text(
+                          imageInfos.length > 1
+                              ? '${imageInfos.length} photos'
+                              : '${imageInfos.length} photo',
+                          style:
+                              Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: context.spi.accent,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
 
-              // Filet séparateur
-              SliverToBoxAdapter(
-                child: Container(
-                  margin: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-                  height: 1,
-                  color: SpiColors.olive.withValues(alpha: 0.3),
+                // Filet séparateur
+                SliverToBoxAdapter(
+                  child: Container(
+                    margin: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                    height: 1,
+                    color: SpiColors.olive.withValues(alpha: 0.3),
+                  ),
                 ),
-              ),
 
-              // Grille
-              SliverPadding(
-                padding: const EdgeInsets.fromLTRB(15, 0, 15, 24),
-                sliver: buildSliverGridView(
-                  context,
-                  imageInfos,
-                  legende: widget.album.title,
-                  auteur: widget.album.authorName,
+                // Grille
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(15, 0, 15, 24),
+                  sliver: buildSliverGridView(
+                    context,
+                    imageInfos,
+                    legende: album.title,
+                    auteur: album.authorName,
+                  ),
                 ),
-              ),
-            ],
-          );
-        },
-      ),
+              ],
+            ),
     );
   }
 }

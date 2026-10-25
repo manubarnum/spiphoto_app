@@ -51,16 +51,19 @@ class _FilDuClubState extends State<_FilDuClub> {
   late Future<List<FavoriClub>> _fil;
   TriClub _tri = TriClub.plusChoisies;
 
-  // Favoris de l'utilisateur, pour l'état du cœur de chaque entrée.
+  // Identifiants des favoris de l'utilisateur, pour l'état du cœur de
+  // chaque entrée.
   Set<String> _mesFavoris = {};
-  StreamSubscription<List<String>>? _abonnement;
+  StreamSubscription<List<ImageWpInfo>>? _abonnement;
 
   @override
   void initState() {
     super.initState();
     _fil = FavoritesService.instance.getFavorisDuClub(tri: _tri);
-    _abonnement = FavoritesService.instance.watchFavorites().listen((urls) {
-      if (mounted) setState(() => _mesFavoris = urls.toSet());
+    _abonnement = FavoritesService.instance.watchFavorites().listen((photos) {
+      if (mounted) {
+        setState(() => _mesFavoris = photos.map((p) => p.mediaId).toSet());
+      }
     });
   }
 
@@ -88,7 +91,11 @@ class _FilDuClubState extends State<_FilDuClub> {
   }
 
   List<ImageWpInfo> _photos(List<FavoriClub> fil) => fil
-      .map((f) => ImageWpInfo.fromFavoriteUrl(f.photoUrl, album: f.albumTitle))
+      .map((f) => ImageWpInfo.fromFavoriteUrl(f.photoUrl,
+          mediaId: f.mediaId,
+          thumbnailUrl: f.vignetteUrl,
+          ecranUrl: f.ecranUrl,
+          album: f.albumTitle))
       .toList();
 
   Future<void> _ouvrir(List<FavoriClub> fil, int index) async {
@@ -101,39 +108,41 @@ class _FilDuClubState extends State<_FilDuClub> {
     // Des favoris ont pu changer dans la visionneuse : on reporte les écarts
     // sur le fil, sans le relire.
     if (!mounted) return;
-    for (final String url in _mesFavoris.difference(avant)) {
-      _ajuster(url, ajout: true);
+    for (final String mediaId in _mesFavoris.difference(avant)) {
+      _ajuster(mediaId, ajout: true);
     }
-    for (final String url in avant.difference(_mesFavoris)) {
-      _ajuster(url, ajout: false);
+    for (final String mediaId in avant.difference(_mesFavoris)) {
+      _ajuster(mediaId, ajout: false);
     }
   }
 
   Future<void> _basculerFavori(ImageWpInfo photo) async {
-    final bool ajout = !_mesFavoris.contains(photo.landscapeUrl);
+    final bool ajout = !_mesFavoris.contains(photo.mediaId);
     await FavoritesService.instance.toggleFavorite(
-      photo.landscapeUrl,
+      photo,
       !ajout,
       albumTitle: photo.album,
     );
-    if (mounted) _ajuster(photo.landscapeUrl, ajout: ajout);
+    if (mounted) _ajuster(photo.mediaId, ajout: ajout);
   }
 
   /// Reporte sur le fil affiché un favori ajouté ou retiré par l'utilisateur,
   /// sans relire Firestore. Une photo qui n'a plus aucun favori sort du fil,
   /// comme après un rechargement. L'ordre est conservé : le tirer-pour-
   /// rafraîchir remet le fil à jour.
-  void _ajuster(String photoUrl, {required bool ajout}) {
-    final String cible = stripWpImageSize(photoUrl);
+  void _ajuster(String mediaId, {required bool ajout}) {
     final User? moi = AuthService.instance.currentUser;
     setState(() {
       _fil = _fil.then((fil) => [
             for (final FavoriClub f in fil)
-              if (stripWpImageSize(f.photoUrl) != cible)
+              if (f.mediaId != mediaId)
                 f
               else if (ajout || f.nbFavoris > 1)
                 FavoriClub(
+                  mediaId: f.mediaId,
                   photoUrl: f.photoUrl,
+                  vignetteUrl: f.vignetteUrl,
+                  ecranUrl: f.ecranUrl,
                   nbFavoris: f.nbFavoris + (ajout ? 1 : -1),
                   membres: _membresApres(f.membres, moi, ajout),
                   albumTitle: f.albumTitle,
@@ -280,7 +289,7 @@ class _FilDuClubState extends State<_FilDuClub> {
                       return _EntreeClub(
                         favori: fil[index],
                         photo: photo,
-                        estMonFavori: _mesFavoris.contains(photo.landscapeUrl),
+                        estMonFavori: _mesFavoris.contains(photo.mediaId),
                         onOuvrir: () => _ouvrir(fil, index),
                         onFavori: () => _basculerFavori(photo),
                         onFondEcran: () => _fondEcran(photo),
@@ -499,14 +508,14 @@ class _Photo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Image plein format décodée à la largeur d'affichage (la vignette
-    // 320 px serait floue sur toute la largeur).
+    // Taille écran décodée à la largeur d'affichage (la vignette 320 px
+    // serait floue sur toute la largeur).
     final int largeur = (MediaQuery.sizeOf(context).width *
             MediaQuery.devicePixelRatioOf(context))
         .round();
     final Widget fond = ColoredBox(color: context.spi.surfaceAlt);
     return ExtendedImage.network(
-      photo.landscapeUrl,
+      photo.ecranUrl,
       fit: BoxFit.cover,
       cacheWidth: largeur,
       loadStateChanged: (state) => switch (state.extendedImageLoadState) {

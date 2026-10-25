@@ -16,7 +16,6 @@ class MyList extends StatefulWidget {
 class _MyListState extends State<MyList> {
   final List<Album> _albums = [];
   final Set<int> _idsAlbums = {};
-  final Map<int, Future<List<ImageWpInfo>>> _imageCache = {};
 
   int _total = 0;
   int _pageSuivante = 1;
@@ -116,13 +115,6 @@ class _MyListState extends State<MyList> {
     return false;
   }
 
-  Future<List<ImageWpInfo>> _getImagesForAlbum(Album album) {
-    return _imageCache.putIfAbsent(
-      album.id,
-      () => extractImagesFromHtml(album.content['rendered']),
-    );
-  }
-
   // Navigateur de l'onglet : l'album s'ouvre sous la nav basse.
   void _ouvrirAlbum(Album album) {
     Navigator.pushNamed(context, '/album_details_screen', arguments: album);
@@ -192,7 +184,6 @@ class _MyListState extends State<MyList> {
             SliverToBoxAdapter(
               child: _PhotoALaUne(
                 album: aLaUne,
-                images: _getImagesForAlbum(aLaUne),
                 onTap: () => _ouvrirAlbum(aLaUne),
               ),
             ),
@@ -267,7 +258,6 @@ class _MyListState extends State<MyList> {
   Widget _tuile(Album album) {
     return _TuileAlbum(
       album: album,
-      images: _getImagesForAlbum(album),
       onTap: () => _ouvrirAlbum(album),
     );
   }
@@ -280,121 +270,114 @@ String _nbPhotos(int n) => n > 1 ? '$n photos' : '$n photo';
 // ─────────────────────────────────────────────────────────────────────────────
 class _PhotoALaUne extends StatelessWidget {
   final Album album;
-  final Future<List<ImageWpInfo>> images;
   final VoidCallback onTap;
 
   const _PhotoALaUne({
     required this.album,
-    required this.images,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
+    final List<ImageWpInfo> photos = album.images;
+    final List<String> meta = [
+      if (album.authorName != null) 'Album de ${album.authorName}',
+      _nbPhotos(photos.length),
+    ];
+
     return GestureDetector(
       onTap: onTap,
       child: SizedBox(
         height: 300,
-        child: FutureBuilder<List<ImageWpInfo>>(
-          future: images,
-          builder: (context, snapshot) {
-            final List<ImageWpInfo> photos = snapshot.data ?? const [];
-            final List<String> meta = [
-              if (album.authorName != null) 'Album de ${album.authorName}',
-              if (snapshot.hasData) _nbPhotos(photos.length),
-            ];
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            // ── Photo ──────────────────────────────────────────────
+            // Taille écran (la vignette 320 px serait floue en pleine
+            // largeur), décodée à la taille d'affichage.
+            if (photos.isNotEmpty)
+              _PhotoReseau(
+                url: photos.first.ecranUrl,
+                urlSecours: photos.first.thumbnailUrl,
+                largeurDecodage: (MediaQuery.sizeOf(context).width *
+                        MediaQuery.devicePixelRatioOf(context))
+                    .round(),
+              )
+            else
+              const _FondPhoto(),
 
-            return Stack(
-              fit: StackFit.expand,
-              children: [
-                // ── Photo ──────────────────────────────────────────────
-                // Image plein format (la vignette 320 px serait floue en
-                // pleine largeur), décodée à la taille d'affichage.
-                if (photos.isNotEmpty)
-                  _PhotoReseau(
-                    url: photos.first.landscapeUrl,
-                    urlSecours: photos.first.thumbnailUrl,
-                    largeurDecodage: (MediaQuery.sizeOf(context).width *
-                            MediaQuery.devicePixelRatioOf(context))
-                        .round(),
-                  )
-                else
-                  const _FondPhoto(),
+            // ── Dégradé de lisibilité ──────────────────────────────
+            DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  stops: const [0.0, 0.3, 1.0],
+                  colors: [
+                    SpiColors.noir.withValues(alpha: 0.35),
+                    SpiColors.noir.withValues(alpha: 0.0),
+                    SpiColors.noir.withValues(alpha: 0.95),
+                  ],
+                ),
+              ),
+            ),
 
-                // ── Dégradé de lisibilité ──────────────────────────────
-                DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      stops: const [0.0, 0.3, 1.0],
-                      colors: [
-                        SpiColors.noir.withValues(alpha: 0.35),
-                        SpiColors.noir.withValues(alpha: 0.0),
-                        SpiColors.noir.withValues(alpha: 0.95),
-                      ],
+            // ── Badge, titre, métadonnées ──────────────────────────
+            Positioned(
+              left: 20,
+              right: 20,
+              bottom: 22,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: SpiColors.olive,
+                      borderRadius: BorderRadius.circular(3),
+                    ),
+                    child: const Text(
+                      'À LA UNE',
+                      style: TextStyle(
+                        color: SpiColors.texte,
+                        fontSize: 9,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 2,
+                      ),
                     ),
                   ),
-                ),
-
-                // ── Badge, titre, métadonnées ──────────────────────────
-                Positioned(
-                  left: 20,
-                  right: 20,
-                  bottom: 22,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 9, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: SpiColors.olive,
-                          borderRadius: BorderRadius.circular(3),
-                        ),
-                        child: const Text(
-                          'À LA UNE',
-                          style: TextStyle(
-                            color: SpiColors.texte,
-                            fontSize: 9,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 2,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      Text(
-                        album.title,
-                        maxLines: 3,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: SpiColors.texte,
-                          fontSize: 27,
-                          fontWeight: FontWeight.w900,
-                          height: 1.1,
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                      if (meta.isNotEmpty) ...[
-                        const SizedBox(height: 7),
-                        Text(
-                          meta.join(' · '),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: SpiColors.texteMuted,
-                            fontSize: 12,
-                            letterSpacing: 0.4,
-                          ),
-                        ),
-                      ],
-                    ],
+                  const SizedBox(height: 10),
+                  Text(
+                    album.title,
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: SpiColors.texte,
+                      fontSize: 27,
+                      fontWeight: FontWeight.w900,
+                      height: 1.1,
+                      letterSpacing: 0.5,
+                    ),
                   ),
-                ),
-              ],
-            );
-          },
+                  if (meta.isNotEmpty) ...[
+                    const SizedBox(height: 7),
+                    Text(
+                      meta.join(' · '),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: SpiColors.texteMuted,
+                        fontSize: 12,
+                        letterSpacing: 0.4,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -456,71 +439,63 @@ class _EnteteSection extends StatelessWidget {
 // ─────────────────────────────────────────────────────────────────────────────
 class _TuileAlbum extends StatelessWidget {
   final Album album;
-  final Future<List<ImageWpInfo>> images;
   final VoidCallback onTap;
 
   const _TuileAlbum({
     required this.album,
-    required this.images,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
+    final List<ImageWpInfo> photos = album.images;
+
     return GestureDetector(
       onTap: onTap,
-      child: FutureBuilder<List<ImageWpInfo>>(
-        future: images,
-        builder: (context, snapshot) {
-          final List<ImageWpInfo> photos = snapshot.data ?? const [];
-
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              AspectRatio(
-                aspectRatio: 1,
-                child: Container(
-                  decoration: BoxDecoration(
-                    border: Border.all(
-                      color: SpiColors.olive.withValues(alpha: 0.5),
-                      width: 1.5,
-                    ),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(10.5),
-                    child: photos.isNotEmpty
-                        ? _PhotoReseau(
-                            url: photos.first.thumbnailUrl,
-                            urlSecours: photos.first.fallbackUrl,
-                          )
-                        : const _FondPhoto(),
-                  ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          AspectRatio(
+            aspectRatio: 1,
+            child: Container(
+              decoration: BoxDecoration(
+                border: Border.all(
+                  color: SpiColors.olive.withValues(alpha: 0.5),
+                  width: 1.5,
                 ),
+                borderRadius: BorderRadius.circular(12),
               ),
-              const SizedBox(height: 8),
-              Text(
-                album.title,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: context.spi.encre,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.9,
-                ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(10.5),
+                child: photos.isNotEmpty
+                    ? _PhotoReseau(
+                        url: photos.first.thumbnailUrl,
+                        urlSecours: photos.first.ecranUrl,
+                      )
+                    : const _FondPhoto(),
               ),
-              if (snapshot.hasData)
-                Text(
-                  _nbPhotos(photos.length),
-                  style: TextStyle(
-                    color: context.spi.encreSecondaire,
-                    fontSize: 11,
-                  ),
-                ),
-            ],
-          );
-        },
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            album.title,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: context.spi.encre,
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.9,
+            ),
+          ),
+          Text(
+            _nbPhotos(photos.length),
+            style: TextStyle(
+              color: context.spi.encreSecondaire,
+              fontSize: 11,
+            ),
+          ),
+        ],
       ),
     );
   }

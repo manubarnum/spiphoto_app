@@ -109,9 +109,9 @@ class _VignettePhoto extends StatelessWidget {
                 case LoadState.completed:
                   return null;
                 case LoadState.failed:
-                  // Fallback image plein format si la vignette est absente
+                  // Repli sur la taille écran si la vignette est absente
                   return ExtendedImage.network(
-                    imageInfos[index].fallbackUrl,
+                    imageInfos[index].ecranUrl,
                     fit: BoxFit.cover,
                     loadStateChanged: (secours) =>
                         secours.extendedImageLoadState == LoadState.failed

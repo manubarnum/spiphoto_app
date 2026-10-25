@@ -1,14 +1,15 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:spiphoto_app/service/image_wp_info.dart' show stripWpImageSize;
+import 'package:spiphoto_app/service/image_wp_info.dart';
 
 /// Gère les favoris de l'utilisateur connecté, stockés dans Firestore.
 ///
 /// Modèle de données (voir firestore.rules) :
 ///   favoriteEvents/{uid}_{mediaId}   — un document par favori individuel
-///       { userId, mediaId, photoUrl, createdAt }
+///       { userId, mediaId, photoUrl, vignetteUrl, ecranUrl, createdAt }
 ///   photoStats/{mediaId}.favoriteCount — compteur agrégé par photo,
 ///       partagé entre tous les utilisateurs.
+/// mediaId est l'identifiant du média WordPress (voir ImageWpInfo.mediaId).
 ///
 /// L'ajout et le retrait touchent les deux collections dans une seule
 /// transaction Firestore pour garantir qu'un événement favori et le
@@ -30,15 +31,7 @@ class FavoritesService {
   // d'avoir toujours la valeur à jour si l'utilisateur se déconnecte/reconnecte.
   String? get _uid => FirebaseAuth.instance.currentUser?.uid;
 
-  /// Dérive un identifiant stable et unique pour une photo à partir de son
-  /// URL. L'app n'a pas d'ID WordPress natif disponible (les albums sont
-  /// extraits par scraping HTML, pas via l'API média) — on encode donc
-  /// l'URL complète (suffixe de taille WordPress retiré, voir
-  /// acces_wordpress.dart) en un identifiant Firestore valide.
-  String _mediaIdFor(String photoUrl) =>
-      Uri.encodeComponent(stripWpImageSize(photoUrl));
-
-  /// Flux TEMPS RÉEL de la liste des URLs favorites.
+  /// Flux TEMPS RÉEL des photos favorites.
   /// À utiliser avec un StreamBuilder dans favoris_screen.dart : dès qu'un
   /// favori est ajouté ou retiré (même depuis un autre écran de l'app),
   /// ce flux émet automatiquement la nouvelle liste.
@@ -48,7 +41,7 @@ class FavoritesService {
   /// tri se fait ici plutôt que par orderBy() : combiné au where() sur
   /// userId, il exigerait un index composite Firestore. Un favori tout juste
   /// ajouté n'a pas encore son horodatage serveur (null) : il passe en tête.
-  Stream<List<String>> watchFavorites() {
+  Stream<List<ImageWpInfo>> watchFavorites() {
     final uid = _uid;
     if (uid == null) return const Stream.empty();
 
@@ -66,9 +59,20 @@ class FavoritesService {
         if (dateB == null) return 1;
         return dateB.compareTo(dateA);
       });
-      return docs.map((doc) => doc.data()['photoUrl'] as String).toList();
+      return docs.map((doc) => _photoFavorite(doc.data())).toList();
     });
   }
+
+  // Les favoris enregistrés par les versions précédentes de l'app n'ont que
+  // photoUrl : fromFavoriteUrl reconstruit alors la vignette.
+  static ImageWpInfo _photoFavorite(Map<String, dynamic> data) =>
+      ImageWpInfo.fromFavoriteUrl(
+        data['photoUrl'] as String,
+        mediaId: data['mediaId'] as String?,
+        thumbnailUrl: data['vignetteUrl'] as String?,
+        ecranUrl: data['ecranUrl'] as String?,
+        album: data['albumTitle'] as String?,
+      );
 
   /// Lecture PONCTUELLE (une seule fois, pas de mise à jour automatique).
   /// Utile quand on veut juste vérifier une valeur sans "écouter" en continu.
@@ -102,12 +106,12 @@ class FavoritesService {
   ///   l'événement pour le fil du Club : aucun profil membre n'existe
   ///   ailleurs dans Firestore. Un changement de nom ultérieur n'est pas
   ///   répercuté (les événements ne sont jamais modifiés).
-  Future<void> addFavorite(String photoUrl, {String? albumTitle}) async {
+  Future<void> addFavorite(ImageWpInfo photo, {String? albumTitle}) async {
     final User? user = FirebaseAuth.instance.currentUser;
     final uid = user?.uid;
     if (uid == null) return;
 
-    final String mediaId = _mediaIdFor(photoUrl);
+    final String mediaId = photo.mediaId;
     final eventRef = _eventsCollection.doc('${uid}_$mediaId');
     final statsRef = _statsCollection.doc(mediaId);
 
@@ -118,7 +122,9 @@ class FavoritesService {
       transaction.set(eventRef, {
         'userId': uid,
         'mediaId': mediaId,
-        'photoUrl': photoUrl,
+        'photoUrl': photo.landscapeUrl,
+        'vignetteUrl': photo.thumbnailUrl,
+        'ecranUrl': photo.ecranUrl,
         'createdAt': FieldValue.serverTimestamp(),
         if (user?.displayName != null) 'userName': user!.displayName,
         if (user?.photoURL != null) 'userPhoto': user!.photoURL,
@@ -138,11 +144,11 @@ class FavoritesService {
   /// - Le compteur est lu dans la transaction puis décrémenté manuellement
   ///   (jamais en dessous de 0) plutôt que via FieldValue.increment(-1), pour
   ///   pouvoir appliquer ce plancher.
-  Future<void> removeFavorite(String photoUrl) async {
+  Future<void> removeFavorite(ImageWpInfo photo) async {
     final uid = _uid;
     if (uid == null) return;
 
-    final String mediaId = _mediaIdFor(photoUrl);
+    final String mediaId = photo.mediaId;
     final eventRef = _eventsCollection.doc('${uid}_$mediaId');
     final statsRef = _statsCollection.doc(mediaId);
 
@@ -166,12 +172,12 @@ class FavoritesService {
 
   /// Bascule l'état favori d'une photo : l'ajoute si elle est absente,
   /// la retire si elle est déjà favorite.
-  Future<void> toggleFavorite(String photoUrl, bool isCurrentlyFavorite,
+  Future<void> toggleFavorite(ImageWpInfo photo, bool isCurrentlyFavorite,
       {String? albumTitle}) async {
     if (isCurrentlyFavorite) {
-      await removeFavorite(photoUrl);
+      await removeFavorite(photo);
     } else {
-      await addFavorite(photoUrl, albumTitle: albumTitle);
+      await addFavorite(photo, albumTitle: albumTitle);
     }
   }
 
@@ -242,7 +248,14 @@ class FavoritesService {
     if (photoUrl == null) return null;
 
     return FavoriClub(
+      mediaId: mediaId,
       photoUrl: photoUrl,
+      vignetteUrl: docs
+          .map((d) => d.data()['vignetteUrl'])
+          .whereType<String>()
+          .firstOrNull,
+      ecranUrl:
+          docs.map((d) => d.data()['ecranUrl']).whereType<String>().firstOrNull,
       nbFavoris: docs.length,
       dernierAjout: (docs.last.data()['createdAt'] as Timestamp?)?.toDate(),
       membres: docs
@@ -273,7 +286,13 @@ enum TriClub { plusChoisies, dernieres }
 
 /// Une photo du fil du Club.
 class FavoriClub {
+  final String mediaId;
   final String photoUrl;
+
+  /// Vignette et taille écran, absentes des favoris enregistrés par les
+  /// versions précédentes de l'app.
+  final String? vignetteUrl;
+  final String? ecranUrl;
   final int nbFavoris;
 
   /// Membres dont le nom est connu (favoris enregistrés avec le profil),
@@ -286,8 +305,11 @@ class FavoriClub {
   final DateTime? dernierAjout;
 
   const FavoriClub({
+    required this.mediaId,
     required this.photoUrl,
     required this.nbFavoris,
+    this.vignetteUrl,
+    this.ecranUrl,
     required this.membres,
     this.albumTitle,
     this.dernierAjout,
