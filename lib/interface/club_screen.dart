@@ -92,22 +92,70 @@ class _FilDuClubState extends State<_FilDuClub> {
       .toList();
 
   Future<void> _ouvrir(List<FavoriClub> fil, int index) async {
+    final Set<String> avant = Set.of(_mesFavoris);
     await Navigator.of(context, rootNavigator: true).push(
       MaterialPageRoute(
         builder: (context) => buildPageView(context, _photos(fil), index),
       ),
     );
-    // Des favoris ont pu changer dans la visionneuse.
-    if (mounted) _recharger();
+    // Des favoris ont pu changer dans la visionneuse : on reporte les écarts
+    // sur le fil, sans le relire.
+    if (!mounted) return;
+    for (final String url in _mesFavoris.difference(avant)) {
+      _ajuster(url, ajout: true);
+    }
+    for (final String url in avant.difference(_mesFavoris)) {
+      _ajuster(url, ajout: false);
+    }
   }
 
   Future<void> _basculerFavori(ImageWpInfo photo) async {
+    final bool ajout = !_mesFavoris.contains(photo.landscapeUrl);
     await FavoritesService.instance.toggleFavorite(
       photo.landscapeUrl,
-      _mesFavoris.contains(photo.landscapeUrl),
+      !ajout,
       albumTitle: photo.album,
     );
-    if (mounted) _recharger();
+    if (mounted) _ajuster(photo.landscapeUrl, ajout: ajout);
+  }
+
+  /// Reporte sur le fil affiché un favori ajouté ou retiré par l'utilisateur,
+  /// sans relire Firestore. Une photo qui n'a plus aucun favori sort du fil,
+  /// comme après un rechargement. L'ordre est conservé : le tirer-pour-
+  /// rafraîchir remet le fil à jour.
+  void _ajuster(String photoUrl, {required bool ajout}) {
+    final String cible = stripWpImageSize(photoUrl);
+    final User? moi = AuthService.instance.currentUser;
+    setState(() {
+      _fil = _fil.then((fil) => [
+            for (final FavoriClub f in fil)
+              if (stripWpImageSize(f.photoUrl) != cible)
+                f
+              else if (ajout || f.nbFavoris > 1)
+                FavoriClub(
+                  photoUrl: f.photoUrl,
+                  nbFavoris: f.nbFavoris + (ajout ? 1 : -1),
+                  membres: _membresApres(f.membres, moi, ajout),
+                  albumTitle: f.albumTitle,
+                  dernierAjout: ajout ? DateTime.now() : f.dernierAjout,
+                ),
+          ]);
+    });
+  }
+
+  // Le membre qui ajoute passe en dernier (ordre d'arrivée) ; au retrait, on
+  // enlève sa dernière occurrence. Sans nom connu, la liste ne change pas :
+  // l'événement est alors enregistré sans profil (voir addFavorite).
+  static List<MembreFavori> _membresApres(
+      List<MembreFavori> membres, User? moi, bool ajout) {
+    final String? nom = moi?.displayName;
+    if (moi == null || nom == null) return membres;
+    if (ajout) {
+      return [...membres, MembreFavori(nom: nom, photoUrl: moi.photoURL)];
+    }
+    final int i = membres
+        .lastIndexWhere((m) => m.nom == nom && m.photoUrl == moi.photoURL);
+    return i == -1 ? membres : ([...membres]..removeAt(i));
   }
 
   void _fondEcran(ImageWpInfo photo) {
