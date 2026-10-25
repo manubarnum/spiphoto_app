@@ -242,6 +242,11 @@ class ScaffoldWithNavigation extends StatefulWidget {
 class _ScaffoldWithNavigationState extends State<ScaffoldWithNavigation> {
   int _currentIndex = 0;
 
+  // Onglets déjà ouverts. IndexedStack construit tous ses enfants : sans
+  // cela, le fil du Club et l'écoute des favoris partiraient dès le
+  // lancement, même si l'onglet n'est jamais ouvert.
+  final Set<int> _ongletsVisites = {0};
+
   // Clés pour conserver l'état de chaque onglet (Navigator indépendant)
   final List<GlobalKey<NavigatorState>> _navigatorKeys = [
     GlobalKey<NavigatorState>(),
@@ -265,10 +270,17 @@ class _ScaffoldWithNavigationState extends State<ScaffoldWithNavigation> {
     _navigatorKeys[index].currentState?.popUntil((route) => route.isFirst);
   }
 
+  void _afficherOnglet(int index) {
+    setState(() {
+      _currentIndex = index;
+      _ongletsVisites.add(index);
+    });
+  }
+
   // Logo de la barre d'accueil : retour à l'accueil depuis n'importe quel
   // onglet, en refermant l'album éventuellement ouvert.
   void _revenirAccueil() {
-    setState(() => _currentIndex = 0);
+    _afficherOnglet(0);
     _revenirALaRacine(0);
   }
 
@@ -276,7 +288,7 @@ class _ScaffoldWithNavigationState extends State<ScaffoldWithNavigation> {
     if (index == _currentIndex) {
       _revenirALaRacine(index);
     } else {
-      setState(() => _currentIndex = index);
+      _afficherOnglet(index);
     }
   }
 
@@ -297,13 +309,20 @@ class _ScaffoldWithNavigationState extends State<ScaffoldWithNavigation> {
           builder: (_) => Scaffold(
             appBar: MyAppBarAccueil(
               onLogoTap: _revenirAccueil,
-              onMesFavoris: () => setState(() => _currentIndex = 1),
+              onMesFavoris: () => _afficherOnglet(1),
             ),
             body: child,
           ),
         );
       },
     );
+  }
+
+  // Un onglet jamais ouvert reste vide ; une fois ouvert, il est conservé.
+  Widget _onglet(int index, Widget child) {
+    return _ongletsVisites.contains(index)
+        ? _buildNavigator(index, child)
+        : const SizedBox.shrink();
   }
 
   @override
@@ -320,11 +339,11 @@ class _ScaffoldWithNavigationState extends State<ScaffoldWithNavigation> {
           index: _currentIndex,
           children: [
             // Onglet 0 — Albums
-            _buildNavigator(0, const MyList()),
+            _onglet(0, const MyList()),
             // Onglet 1 — Mes Favoris
-            _buildNavigator(1, const FavorisScreen()),
+            _onglet(1, const FavorisScreen()),
             // Onglet 2 — Club
-            _buildNavigator(2, const ClubScreen()),
+            _onglet(2, const ClubScreen()),
           ],
         ),
         bottomNavigationBar: SpiBottomNav(
