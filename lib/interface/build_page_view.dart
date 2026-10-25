@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:spiphoto_app/spi_colors.dart';
 import 'package:spiphoto_app/service/image_wp_info.dart';
 import 'package:extended_image/extended_image.dart';
@@ -113,173 +114,178 @@ class _PageViewScreenState extends State<PageViewScreen> {
   Widget build(BuildContext context) {
     final bool isFav = _favoriteUrls.contains(_photo.landscapeUrl);
 
-    return Scaffold(
-      backgroundColor: SpiColors.noir,
-      body: Stack(
-        fit: StackFit.expand,
-        children: [
-          // ── Photos ─────────────────────────────────────────────────────
-          PageView.builder(
-            controller: _pageController,
-            itemCount: widget.imageInfos.length,
-            onPageChanged: (index) => setState(() => _currentIndex = index),
-            itemBuilder: (context, index) => Center(
-              child: AspectRatio(
-                aspectRatio: 2 / 3,
-                child: _PhotoPleinCadre(
-                    url: widget.imageInfos[index].landscapeUrl),
-              ),
-            ),
-          ),
-
-          // ── Voile de lisibilité (laisse passer les gestes) ─────────────
-          IgnorePointer(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  stops: const [0.0, 0.22, 0.55, 1.0],
-                  colors: [
-                    SpiColors.noir.withValues(alpha: 0.7),
-                    SpiColors.noir.withValues(alpha: 0.0),
-                    SpiColors.noir.withValues(alpha: 0.0),
-                    SpiColors.noir.withValues(alpha: 0.96),
-                  ],
+    // Écran toujours sombre (centré sur la photo), quel que soit le thème :
+    // icônes claires dans la barre d'état.
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light,
+      child: Scaffold(
+        backgroundColor: SpiColors.noir,
+        body: Stack(
+          fit: StackFit.expand,
+          children: [
+            // ── Photos ─────────────────────────────────────────────────────
+            PageView.builder(
+              controller: _pageController,
+              itemCount: widget.imageInfos.length,
+              onPageChanged: (index) => setState(() => _currentIndex = index),
+              itemBuilder: (context, index) => Center(
+                child: AspectRatio(
+                  aspectRatio: 2 / 3,
+                  child: _PhotoPleinCadre(
+                      url: widget.imageInfos[index].landscapeUrl),
                 ),
               ),
             ),
-          ),
 
-          SafeArea(
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                // ── Haut : retour + compteur ───────────────────────────
-                Positioned(
-                  top: 14,
-                  left: 14,
-                  right: 14,
-                  child: Row(
-                    children: [
-                      Material(
-                        color: SpiColors.surface.withValues(alpha: 0.65),
-                        shape: const CircleBorder(),
-                        clipBehavior: Clip.antiAlias,
-                        child: InkWell(
-                          onTap: () => Navigator.pop(context),
-                          child: const SizedBox.square(
-                            dimension: 40,
-                            child: Icon(
-                              Icons.arrow_back_ios_new,
-                              color: SpiColors.texte,
-                              size: 20,
-                              semanticLabel: 'Retour',
-                            ),
-                          ),
-                        ),
-                      ),
-                      const Spacer(),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 13, vertical: 7),
-                        decoration: BoxDecoration(
-                          color: SpiColors.surface.withValues(alpha: 0.65),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          '${_currentIndex + 1} / ${widget.imageInfos.length}',
-                          style: const TextStyle(
-                            color: SpiColors.texte,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: 1.0,
-                          ),
-                        ),
-                      ),
+            // ── Voile de lisibilité (laisse passer les gestes) ─────────────
+            IgnorePointer(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    stops: const [0.0, 0.22, 0.55, 1.0],
+                    colors: [
+                      SpiColors.noir.withValues(alpha: 0.7),
+                      SpiColors.noir.withValues(alpha: 0.0),
+                      SpiColors.noir.withValues(alpha: 0.0),
+                      SpiColors.noir.withValues(alpha: 0.96),
                     ],
                   ),
                 ),
+              ),
+            ),
 
-                // ── Bas : légende, auteur, actions, pagination ─────────
-                Positioned(
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 22),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
+            SafeArea(
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  // ── Haut : retour + compteur ───────────────────────────
+                  Positioned(
+                    top: 14,
+                    left: 14,
+                    right: 14,
+                    child: Row(
                       children: [
-                        if (widget.legende != null)
-                          Text(
-                            widget.legende!,
-                            maxLines: 3,
-                            overflow: TextOverflow.ellipsis,
+                        Material(
+                          color: SpiColors.surface.withValues(alpha: 0.65),
+                          shape: const CircleBorder(),
+                          clipBehavior: Clip.antiAlias,
+                          child: InkWell(
+                            onTap: () => Navigator.pop(context),
+                            child: const SizedBox.square(
+                              dimension: 40,
+                              child: Icon(
+                                Icons.arrow_back_ios_new,
+                                color: SpiColors.texte,
+                                size: 20,
+                                semanticLabel: 'Retour',
+                              ),
+                            ),
+                          ),
+                        ),
+                        const Spacer(),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 13, vertical: 7),
+                          decoration: BoxDecoration(
+                            color: SpiColors.surface.withValues(alpha: 0.65),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            '${_currentIndex + 1} / ${widget.imageInfos.length}',
                             style: const TextStyle(
                               color: SpiColors.texte,
-                              fontSize: 15,
-                              height: 1.45,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: 1.0,
                             ),
                           ),
-                        if (widget.auteur != null) ...[
-                          const SizedBox(height: 9),
-                          Row(
-                            children: [
-                              Container(
-                                width: 6,
-                                height: 6,
-                                decoration: const BoxDecoration(
-                                  color: SpiColors.mauve,
-                                  shape: BoxShape.circle,
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  widget.auteur!.toUpperCase(),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    color: SpiColors.mauveClair,
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600,
-                                    letterSpacing: 1.6,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                        const SizedBox(height: 20),
-                        _BarreActions(
-                          isFav: isFav,
-                          onFondEcran: () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => WallpaperPreviewScreen(
-                                  imageUrl: _photo.landscapeUrl),
-                            ),
-                          ),
-                          onFavori: _toggleFavorite,
-                          onPartager: _partager,
                         ),
-                        if (widget.imageInfos.length > 1) ...[
-                          const SizedBox(height: 16),
-                          _IndicateursPage(
-                            index: _currentIndex,
-                            total: widget.imageInfos.length,
-                          ),
-                        ],
                       ],
                     ),
                   ),
-                ),
-              ],
+
+                  // ── Bas : légende, auteur, actions, pagination ─────────
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 22),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (widget.legende != null)
+                            Text(
+                              widget.legende!,
+                              maxLines: 3,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: SpiColors.texte,
+                                fontSize: 15,
+                                height: 1.45,
+                              ),
+                            ),
+                          if (widget.auteur != null) ...[
+                            const SizedBox(height: 9),
+                            Row(
+                              children: [
+                                Container(
+                                  width: 6,
+                                  height: 6,
+                                  decoration: const BoxDecoration(
+                                    color: SpiColors.mauve,
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    widget.auteur!.toUpperCase(),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      color: SpiColors.mauveClair,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                      letterSpacing: 1.6,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                          const SizedBox(height: 20),
+                          _BarreActions(
+                            isFav: isFav,
+                            onFondEcran: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => WallpaperPreviewScreen(
+                                    imageUrl: _photo.landscapeUrl),
+                              ),
+                            ),
+                            onFavori: _toggleFavorite,
+                            onPartager: _partager,
+                          ),
+                          if (widget.imageInfos.length > 1) ...[
+                            const SizedBox(height: 16),
+                            _IndicateursPage(
+                              index: _currentIndex,
+                              total: widget.imageInfos.length,
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

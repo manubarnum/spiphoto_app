@@ -142,7 +142,8 @@ class _MyListState extends State<MyList> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.wifi_off, color: SpiColors.texteMuted, size: 56),
+              Icon(Icons.wifi_off,
+                  color: context.spi.encreSecondaire, size: 56),
               const SizedBox(height: 20),
               Text('Impossible de charger les albums',
                   style: Theme.of(context).textTheme.titleMedium),
@@ -152,11 +153,11 @@ class _MyListState extends State<MyList> {
               const SizedBox(height: 24),
               OutlinedButton.icon(
                 onPressed: _reessayerPremierePage,
-                icon: const Icon(Icons.refresh, color: SpiColors.mauve),
-                label: const Text('Réessayer',
-                    style: TextStyle(color: SpiColors.mauve)),
+                icon: Icon(Icons.refresh, color: context.spi.mauve),
+                label: Text('Réessayer',
+                    style: TextStyle(color: context.spi.mauve)),
                 style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: SpiColors.mauve),
+                  side: BorderSide(color: context.spi.mauve),
                 ),
               ),
             ],
@@ -179,8 +180,8 @@ class _MyListState extends State<MyList> {
 
     // ── Mosaïque ────────────────────────────────────────────────────────
     return RefreshIndicator(
-      color: SpiColors.mauve,
-      backgroundColor: SpiColors.surface,
+      color: context.spi.mauve,
+      backgroundColor: context.spi.surface,
       onRefresh: _chargerPremierePage,
       child: NotificationListener<ScrollNotification>(
         onNotification: _surDefilement,
@@ -249,9 +250,9 @@ class _MyListState extends State<MyList> {
                         setState(() => _erreurSuite = false);
                         _chargerSuite();
                       },
-                      icon: const Icon(Icons.refresh, color: SpiColors.mauve),
-                      label: const Text('Charger la suite',
-                          style: TextStyle(color: SpiColors.mauve)),
+                      icon: Icon(Icons.refresh, color: context.spi.mauve),
+                      label: Text('Charger la suite',
+                          style: TextStyle(color: context.spi.mauve)),
                     ),
                   ),
                 ),
@@ -418,10 +419,10 @@ class _EnteteSection extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.baseline,
             textBaseline: TextBaseline.alphabetic,
             children: [
-              const Text(
+              Text(
                 'TOUS LES ALBUMS',
                 style: TextStyle(
-                  color: SpiColors.texte,
+                  color: context.spi.encre,
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 2.4,
@@ -429,8 +430,8 @@ class _EnteteSection extends StatelessWidget {
               ),
               Text(
                 '$nbAlbums',
-                style: const TextStyle(
-                  color: SpiColors.mauveClair,
+                style: TextStyle(
+                  color: context.spi.accent,
                   fontSize: 11,
                   fontWeight: FontWeight.w600,
                   letterSpacing: 0.6,
@@ -501,8 +502,8 @@ class _TuileAlbum extends StatelessWidget {
                 album.title,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: SpiColors.texte,
+                style: TextStyle(
+                  color: context.spi.encre,
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 0.9,
@@ -511,8 +512,8 @@ class _TuileAlbum extends StatelessWidget {
               if (snapshot.hasData)
                 Text(
                   _nbPhotos(photos.length),
-                  style: const TextStyle(
-                    color: SpiColors.texteMuted,
+                  style: TextStyle(
+                    color: context.spi.encreSecondaire,
                     fontSize: 11,
                   ),
                 ),
@@ -564,11 +565,11 @@ class _FondPhoto extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ColoredBox(
-      color: SpiColors.surfaceAlt,
+      color: context.spi.surfaceAlt,
       child: enErreur
-          ? const Center(
+          ? Center(
               child: Icon(Icons.broken_image_outlined,
-                  color: SpiColors.texteMuted, size: 32),
+                  color: context.spi.encreSecondaire, size: 32),
             )
           : const SizedBox.expand(),
     );

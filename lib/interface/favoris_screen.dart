@@ -56,7 +56,7 @@ class _LoggedOutViewState extends State<_LoggedOutView> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.favorite_border, color: SpiColors.mauve, size: 64),
+          Icon(Icons.favorite_border, color: context.spi.mauve, size: 64),
           const SizedBox(height: 20),
           Text(
             'Mes Favoris',
@@ -122,13 +122,13 @@ class _LoggedInView extends StatelessWidget {
                   children: [
                     CircleAvatar(
                       radius: 16,
-                      backgroundColor: SpiColors.surfaceHigh,
+                      backgroundColor: context.spi.surfaceElevee,
                       backgroundImage: user.photoURL != null
                           ? NetworkImage(user.photoURL!)
                           : null,
                       child: user.photoURL == null
-                          ? const Icon(Icons.person,
-                              size: 18, color: SpiColors.texteMuted)
+                          ? Icon(Icons.person,
+                              size: 18, color: context.spi.encreSecondaire)
                           : null,
                     ),
                     const SizedBox(width: 11),
@@ -137,15 +137,15 @@ class _LoggedInView extends StatelessWidget {
                         user.email ?? '',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: SpiColors.texteMuted,
+                        style: TextStyle(
+                          color: context.spi.encreSecondaire,
                           fontSize: 12,
                         ),
                       ),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.logout,
-                          color: SpiColors.texteMuted, size: 20),
+                      icon: Icon(Icons.logout,
+                          color: context.spi.encreSecondaire, size: 20),
                       tooltip: 'Se déconnecter',
                       onPressed: () => AuthService.instance.signOut(),
                     ),
@@ -175,7 +175,7 @@ class _LoggedInView extends StatelessWidget {
                             ? '${urls.length} photos'
                             : '${urls.length} photo',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: SpiColors.mauveClair,
+                              color: context.spi.accent,
                               fontWeight: FontWeight.w600,
                             ),
                       ),
@@ -195,10 +195,10 @@ class _LoggedInView extends StatelessWidget {
             ),
 
             if (enChargement)
-              const SliverFillRemaining(
+              SliverFillRemaining(
                 hasScrollBody: false,
                 child: Center(
-                  child: CircularProgressIndicator(color: SpiColors.mauve),
+                  child: CircularProgressIndicator(color: context.spi.mauve),
                 ),
               )
             else if (urls.isEmpty)
@@ -211,7 +211,7 @@ class _LoggedInView extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(Icons.favorite_border,
-                            color: SpiColors.texteMuted, size: 48),
+                            color: context.spi.encreSecondaire, size: 48),
                         const SizedBox(height: 16),
                         Text(
                           'Aucun favori pour l\'instant.\nAppuie sur le cœur d\'une photo pour l\'ajouter ici.',
@@ -232,7 +232,7 @@ class _LoggedInView extends StatelessWidget {
                 sliver: buildSliverGridView(
                   context,
                   urls.map((url) => ImageWpInfo.fromFavoriteUrl(url)).toList(),
-                  bordure: SpiColors.mauve.withValues(alpha: 0.55),
+                  bordure: context.spi.mauve.withValues(alpha: 0.55),
                 ),
               ),
           ],

@@ -27,7 +27,7 @@ class SpiBottomNav extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: SpiColors.surface,
+      color: context.spi.surface,
       shape: Border(
         top: BorderSide(color: SpiColors.olive.withValues(alpha: 0.25)),
       ),
@@ -66,7 +66,8 @@ class _OngletNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color couleur = actif ? SpiColors.mauve : SpiColors.texteMuted;
+    final Color couleur =
+        actif ? context.spi.mauve : context.spi.encreSecondaire;
 
     return Semantics(
       selected: actif,

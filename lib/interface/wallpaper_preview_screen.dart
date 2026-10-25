@@ -185,144 +185,150 @@ class _WallpaperPreviewScreenState extends State<WallpaperPreviewScreen> {
   Widget build(BuildContext context) {
     final Size ecran = MediaQuery.sizeOf(context);
 
-    return Scaffold(
-      backgroundColor: SpiColors.noir,
-      body: SafeArea(
-        child: Column(
-          children: [
-            // ── Entête ─────────────────────────────────────────────────
-            Padding(
-              padding: const EdgeInsets.fromLTRB(4, 4, 16, 4),
-              child: Row(
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.close,
-                        color: SpiColors.texte, size: 20),
-                    tooltip: 'Fermer',
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                  const SizedBox(width: 2),
-                  const Text(
-                    'APERÇU',
-                    style: TextStyle(
-                      color: SpiColors.texte,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 2,
+    // Écran toujours sombre (centré sur la photo), quel que soit le thème :
+    // icônes claires dans la barre d'état.
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light,
+      child: Scaffold(
+        backgroundColor: SpiColors.noir,
+        body: SafeArea(
+          child: Column(
+            children: [
+              // ── Entête ─────────────────────────────────────────────────
+              Padding(
+                padding: const EdgeInsets.fromLTRB(4, 4, 16, 4),
+                child: Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.close,
+                          color: SpiColors.texte, size: 20),
+                      tooltip: 'Fermer',
+                      onPressed: () => Navigator.pop(context),
                     ),
-                  ),
-                ],
-              ),
-            ),
-
-            // ── Maquette de téléphone ──────────────────────────────────
-            // Aux proportions de l'écran réel : ce qui est vu est ce qui
-            // sera posé. Occupe toute la hauteur libre (la maquette du
-            // handoff, plafonnée à 430 × 212 px, était jugée trop petite),
-            // largeur limitée à 70 % de l'écran.
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(0, 4, 0, 8),
-                child: LayoutBuilder(
-                  builder: (context, contraintes) {
-                    final double ratio = ecran.width / ecran.height;
-                    double hauteur = contraintes.maxHeight;
-                    double largeur = hauteur * ratio;
-                    if (largeur > ecran.width * 0.7) {
-                      largeur = ecran.width * 0.7;
-                      hauteur = largeur / ratio;
-                    }
-                    return Center(
-                      child: Container(
-                        width: largeur,
-                        height: hauteur,
-                        decoration: BoxDecoration(
-                          border: Border.all(color: SpiColors.olive, width: 2),
-                          borderRadius: BorderRadius.circular(22),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.6),
-                              blurRadius: 30,
-                              offset: const Offset(0, 10),
-                            ),
-                          ],
-                        ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(20),
-                          child: _contenuMaquette(),
-                        ),
+                    const SizedBox(width: 2),
+                    const Text(
+                      'APERÇU',
+                      style: TextStyle(
+                        color: SpiColors.texte,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 2,
                       ),
-                    );
-                  },
+                    ),
+                  ],
                 ),
               ),
-            ),
 
-            // ── Réglages et validation ─────────────────────────────────
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _SelecteurCible(cible: _cible, onChanged: _choisirCible),
-                  const SizedBox(height: 3),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: SizedBox(
-                          height: 32,
-                          child: SliderTheme(
-                            data: SliderTheme.of(context).copyWith(
-                              trackHeight: 2,
-                              activeTrackColor: SpiColors.olive,
-                              inactiveTrackColor: SpiColors.surfaceHigh,
-                              thumbColor: SpiColors.mauveClair,
-                              overlayColor:
-                                  SpiColors.mauveClair.withValues(alpha: 0.15),
-                              trackShape: const RectangularSliderTrackShape(),
-                              thumbShape: const RoundSliderThumbShape(
-                                enabledThumbRadius: 8,
-                                elevation: 0,
-                                pressedElevation: 0,
+              // ── Maquette de téléphone ──────────────────────────────────
+              // Aux proportions de l'écran réel : ce qui est vu est ce qui
+              // sera posé. Occupe toute la hauteur libre (la maquette du
+              // handoff, plafonnée à 430 × 212 px, était jugée trop petite),
+              // largeur limitée à 70 % de l'écran.
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(0, 4, 0, 8),
+                  child: LayoutBuilder(
+                    builder: (context, contraintes) {
+                      final double ratio = ecran.width / ecran.height;
+                      double hauteur = contraintes.maxHeight;
+                      double largeur = hauteur * ratio;
+                      if (largeur > ecran.width * 0.7) {
+                        largeur = ecran.width * 0.7;
+                        hauteur = largeur / ratio;
+                      }
+                      return Center(
+                        child: Container(
+                          width: largeur,
+                          height: hauteur,
+                          decoration: BoxDecoration(
+                            border:
+                                Border.all(color: SpiColors.olive, width: 2),
+                            borderRadius: BorderRadius.circular(22),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.6),
+                                blurRadius: 30,
+                                offset: const Offset(0, 10),
                               ),
-                              overlayShape: const RoundSliderOverlayShape(
-                                  overlayRadius: 16),
-                              showValueIndicator: ShowValueIndicator.never,
-                            ),
-                            child: Slider(
-                              value: _cropScale,
-                              padding: EdgeInsets.zero,
-                              semanticFormatterCallback: (valeur) =>
-                                  'Zoom ${(1 + valeur * (_zoomMax - 1)).toStringAsFixed(1)}×',
-                              onChanged: (valeur) =>
-                                  setState(() => _cropScale = valeur),
+                            ],
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(20),
+                            child: _contenuMaquette(),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+
+              // ── Réglages et validation ─────────────────────────────────
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _SelecteurCible(cible: _cible, onChanged: _choisirCible),
+                    const SizedBox(height: 3),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: SizedBox(
+                            height: 32,
+                            child: SliderTheme(
+                              data: SliderTheme.of(context).copyWith(
+                                trackHeight: 2,
+                                activeTrackColor: SpiColors.olive,
+                                inactiveTrackColor: SpiColors.surfaceHigh,
+                                thumbColor: SpiColors.mauveClair,
+                                overlayColor: SpiColors.mauveClair
+                                    .withValues(alpha: 0.15),
+                                trackShape: const RectangularSliderTrackShape(),
+                                thumbShape: const RoundSliderThumbShape(
+                                  enabledThumbRadius: 8,
+                                  elevation: 0,
+                                  pressedElevation: 0,
+                                ),
+                                overlayShape: const RoundSliderOverlayShape(
+                                    overlayRadius: 16),
+                                showValueIndicator: ShowValueIndicator.never,
+                              ),
+                              child: Slider(
+                                value: _cropScale,
+                                padding: EdgeInsets.zero,
+                                semanticFormatterCallback: (valeur) =>
+                                    'Zoom ${(1 + valeur * (_zoomMax - 1)).toStringAsFixed(1)}×',
+                                onChanged: (valeur) =>
+                                    setState(() => _cropScale = valeur),
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 10),
-                      const Icon(Icons.zoom_out_map,
-                          color: SpiColors.texteMuted, size: 20),
-                    ],
-                  ),
-                  const Text(
-                    'Recadrage — glissez pour ajuster',
-                    style: TextStyle(
-                      color: SpiColors.texteMuted,
-                      fontSize: 11,
-                      letterSpacing: 0.4,
+                        const SizedBox(width: 10),
+                        const Icon(Icons.zoom_out_map,
+                            color: SpiColors.texteMuted, size: 20),
+                      ],
                     ),
-                  ),
-                  const SizedBox(height: 20),
-                  _BoutonAppliquer(
-                    libelle: _cible.libelleBouton,
-                    enCours: _application,
-                    onTap: _tailleImage == null ? null : _appliquer,
-                  ),
-                ],
+                    const Text(
+                      'Recadrage — glissez pour ajuster',
+                      style: TextStyle(
+                        color: SpiColors.texteMuted,
+                        fontSize: 11,
+                        letterSpacing: 0.4,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    _BoutonAppliquer(
+                      libelle: _cible.libelleBouton,
+                      enCours: _application,
+                      onTap: _tailleImage == null ? null : _appliquer,
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

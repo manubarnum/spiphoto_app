@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:spiphoto_app/spi_colors.dart';
 import 'package:spiphoto_app/service/auth_service.dart';
+import 'package:spiphoto_app/service/theme_service.dart';
 
 /// Ouvre le panneau « Mon compte » depuis l'icône utilisateur de la barre
 /// d'accueil. [onMesFavoris] bascule sur l'onglet Mes favoris.
@@ -10,7 +11,8 @@ Future<void> afficherCompte(BuildContext context,
   return showModalBottomSheet<void>(
     context: context,
     useRootNavigator: true,
-    backgroundColor: SpiColors.surface,
+    // Fond lu dans bottomSheetTheme (main.dart) et non figé ici : il suit
+    // ainsi la bascule jour / nuit faite depuis le panneau ouvert.
     showDragHandle: true,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
@@ -72,12 +74,12 @@ class _PanneauCompteState extends State<_PanneauCompte> {
             children: [
               CircleAvatar(
                 radius: 24,
-                backgroundColor: SpiColors.surfaceHigh,
+                backgroundColor: context.spi.surfaceElevee,
                 backgroundImage:
                     user.photoURL != null ? NetworkImage(user.photoURL!) : null,
                 child: user.photoURL == null
-                    ? const Icon(Icons.person,
-                        size: 26, color: SpiColors.texteMuted)
+                    ? Icon(Icons.person,
+                        size: 26, color: context.spi.encreSecondaire)
                     : null,
               ),
               const SizedBox(width: 14),
@@ -89,8 +91,8 @@ class _PanneauCompteState extends State<_PanneauCompte> {
                       user.displayName ?? 'Mon compte',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: SpiColors.texte,
+                      style: TextStyle(
+                        color: context.spi.encre,
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
                       ),
@@ -101,8 +103,8 @@ class _PanneauCompteState extends State<_PanneauCompte> {
                         user.email!,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: SpiColors.texteMuted,
+                        style: TextStyle(
+                          color: context.spi.encreSecondaire,
                           fontSize: 12,
                         ),
                       ),
@@ -123,6 +125,8 @@ class _PanneauCompteState extends State<_PanneauCompte> {
           },
         ),
         const _Separateur(),
+        _ligneTheme(),
+        const _Separateur(),
         _LigneCompte(
           icone: Icons.logout,
           libelle: 'Se déconnecter',
@@ -137,28 +141,41 @@ class _PanneauCompteState extends State<_PanneauCompte> {
   }
 
   Widget _vueDeconnectee() {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _connexion(),
+        const _Separateur(),
+        _ligneTheme(),
+        const SizedBox(height: 8),
+      ],
+    );
+  }
+
+  Widget _connexion() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+      padding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.account_circle_outlined,
-              color: SpiColors.mauveClair, size: 48),
+          Icon(Icons.account_circle_outlined,
+              color: context.spi.accent, size: 48),
           const SizedBox(height: 12),
-          const Text(
+          Text(
             'Mon compte',
             style: TextStyle(
-              color: SpiColors.texte,
+              color: context.spi.encre,
               fontSize: 18,
               fontWeight: FontWeight.w700,
               letterSpacing: 0.5,
             ),
           ),
           const SizedBox(height: 8),
-          const Text(
+          Text(
             'Connectez-vous pour enregistrer vos photos favorites.',
             textAlign: TextAlign.center,
-            style: TextStyle(color: SpiColors.texteMuted, fontSize: 13),
+            style: TextStyle(color: context.spi.encreSecondaire, fontSize: 13),
           ),
           const SizedBox(height: 20),
           SizedBox(
@@ -192,6 +209,18 @@ class _PanneauCompteState extends State<_PanneauCompte> {
       ),
     );
   }
+
+  // Jour / nuit : indépendant du compte, proposé connecté ou non. Mêmes
+  // libellés et icônes que la bascule du site (soleil « Jour » la nuit,
+  // lune « Nuit » le jour). Le panneau reste ouvert pour voir l'effet.
+  Widget _ligneTheme() {
+    final bool sombre = Theme.of(context).brightness == Brightness.dark;
+    return _LigneCompte(
+      icone: sombre ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
+      libelle: sombre ? 'Mode jour' : 'Mode nuit',
+      onTap: () => ThemeService.instance.basculer(sombreAffiche: sombre),
+    );
+  }
 }
 
 class _LigneCompte extends StatelessWidget {
@@ -213,13 +242,13 @@ class _LigneCompte extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
         child: Row(
           children: [
-            Icon(icone, color: SpiColors.texteMuted, size: 22),
+            Icon(icone, color: context.spi.encreSecondaire, size: 22),
             const SizedBox(width: 14),
             Expanded(
               child: Text(
                 libelle,
-                style: const TextStyle(
-                  color: SpiColors.texte,
+                style: TextStyle(
+                  color: context.spi.encre,
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
                 ),
@@ -240,7 +269,7 @@ class _Separateur extends StatelessWidget {
     return Container(
       height: 1,
       margin: const EdgeInsets.symmetric(horizontal: 16),
-      color: SpiColors.surfaceHigh,
+      color: context.spi.surfaceElevee,
     );
   }
 }

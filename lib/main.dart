@@ -10,17 +10,17 @@ import 'package:spiphoto_app/interface/favoris_screen.dart';
 import 'package:spiphoto_app/interface/club_screen.dart';
 import 'package:spiphoto_app/service/acces_wordpress.dart';
 import 'package:spiphoto_app/service/auth_service.dart';
+import 'package:spiphoto_app/service/theme_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
   await AuthService.instance.initialize();
-  // Barre de statut transparente — immersif magazine
+  await ThemeService.instance.init();
+  // Barre de statut transparente — immersif magazine. La couleur des icônes
+  // suit le thème (AppBarTheme.systemOverlayStyle).
   SystemChrome.setSystemUIOverlayStyle(
-    const SystemUiOverlayStyle(
-      statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.light,
-    ),
+    const SystemUiOverlayStyle(statusBarColor: Colors.transparent),
   );
   runApp(const MyApp());
 }
@@ -33,60 +33,79 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'SPIPHOTO',
-      debugShowCheckedModeBanner: false,
-      theme: _buildTheme(),
-      home: const ScaffoldWithNavigation(),
+    // Jour / nuit : choix de l'utilisateur, sinon réglage de l'appareil.
+    return ValueListenableBuilder<bool?>(
+      valueListenable: ThemeService.instance.sombre,
+      builder: (context, sombre, _) => MaterialApp(
+        title: 'SPIPHOTO',
+        debugShowCheckedModeBanner: false,
+        theme: _buildTheme(SpiPalette.clair, Brightness.light),
+        darkTheme: _buildTheme(SpiPalette.sombre, Brightness.dark),
+        themeMode: switch (sombre) {
+          true => ThemeMode.dark,
+          false => ThemeMode.light,
+          null => ThemeMode.system,
+        },
+        home: const ScaffoldWithNavigation(),
+      ),
     );
   }
 
-  ThemeData _buildTheme() {
+  ThemeData _buildTheme(SpiPalette p, Brightness luminosite) {
+    final bool sombre = luminosite == Brightness.dark;
+
     return ThemeData(
       useMaterial3: true,
-      brightness: Brightness.dark,
+      brightness: luminosite,
+      extensions: [p],
 
       // ── Couleurs ────────────────────────────────────────────────────────
-      colorScheme: const ColorScheme.dark(
+      // L'olive et le texte crème posé dessus ne changent pas avec le thème.
+      colorScheme: ColorScheme(
+        brightness: luminosite,
         primary: SpiColors.olive,
         onPrimary: SpiColors.texte,
         primaryContainer: SpiColors.oliveFonce,
         onPrimaryContainer: SpiColors.texte,
-        secondary: SpiColors.mauve,
+        secondary: p.mauve,
         onSecondary: SpiColors.texte,
         secondaryContainer: SpiColors.mauveFonce,
         onSecondaryContainer: SpiColors.texte,
-        surface: SpiColors.surface,
-        onSurface: SpiColors.texte,
-        surfaceContainerHighest: SpiColors.surfaceAlt,
+        surface: p.surface,
+        onSurface: p.encre,
+        onSurfaceVariant: p.encreSecondaire,
+        surfaceContainerHighest: p.surfaceAlt,
         error: SpiColors.erreur,
         onError: SpiColors.texte,
       ),
 
-      scaffoldBackgroundColor: SpiColors.noir,
+      scaffoldBackgroundColor: p.fond,
 
       // ── AppBar ──────────────────────────────────────────────────────────
-      appBarTheme: const AppBarTheme(
-        backgroundColor: SpiColors.surface,
-        foregroundColor: SpiColors.texte,
+      appBarTheme: AppBarTheme(
+        backgroundColor: p.surface,
+        foregroundColor: p.encre,
         elevation: 0,
         scrolledUnderElevation: 0,
         centerTitle: true,
+        // Icônes de la barre d'état lisibles sur la barre d'app
+        systemOverlayStyle:
+            sombre ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
         titleTextStyle: TextStyle(
-          color: SpiColors.texte,
+          color: p.encre,
           fontSize: 16.0,
           fontWeight: FontWeight.w700,
           letterSpacing: 3.0, // effet magazine éditorial
         ),
         iconTheme: IconThemeData(
-          color: SpiColors.texte,
+          color: p.encre,
           size: 24.0,
         ),
       ),
 
       // ── Cards ────────────────────────────────────────────────────────────
       cardTheme: CardThemeData(
-        color: SpiColors.surface,
+        color: p.surface,
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12.0),
@@ -96,39 +115,46 @@ class MyApp extends StatelessWidget {
       ),
 
       // ── Divider ──────────────────────────────────────────────────────────
-      dividerTheme: const DividerThemeData(
-        color: SpiColors.surfaceAlt,
+      dividerTheme: DividerThemeData(
+        color: p.surfaceAlt,
         thickness: 1,
         space: 1,
       ),
 
       // ── Icons ────────────────────────────────────────────────────────────
-      iconTheme: const IconThemeData(
-        color: SpiColors.texte,
+      iconTheme: IconThemeData(
+        color: p.encre,
         size: 24.0,
       ),
 
       // ── ProgressIndicator ────────────────────────────────────────────────
-      progressIndicatorTheme: const ProgressIndicatorThemeData(
-        color: SpiColors.mauve,
+      progressIndicatorTheme: ProgressIndicatorThemeData(
+        color: p.mauve,
+      ),
+
+      // ── BottomSheet (panneau « Mon compte ») ─────────────────────────────
+      bottomSheetTheme: BottomSheetThemeData(
+        backgroundColor: p.surface,
+        modalBackgroundColor: p.surface,
+        dragHandleColor: p.encreTertiaire,
       ),
 
       // ── SnackBar ─────────────────────────────────────────────────────────
-      snackBarTheme: const SnackBarThemeData(
-        backgroundColor: SpiColors.surfaceHigh,
-        contentTextStyle: TextStyle(color: SpiColors.texte),
-        actionTextColor: SpiColors.mauveClair,
+      snackBarTheme: SnackBarThemeData(
+        backgroundColor: p.surfaceElevee,
+        contentTextStyle: TextStyle(color: p.encre),
+        actionTextColor: p.accent,
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
+        shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.all(Radius.circular(8)),
         ),
       ),
 
       // ── Chips (pour filtres futurs) ──────────────────────────────────────
       chipTheme: ChipThemeData(
-        backgroundColor: SpiColors.surfaceAlt,
+        backgroundColor: p.surfaceAlt,
         selectedColor: SpiColors.oliveFonce,
-        labelStyle: const TextStyle(color: SpiColors.texte, fontSize: 13),
+        labelStyle: TextStyle(color: p.encre, fontSize: 13),
         side: BorderSide.none,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
@@ -136,58 +162,58 @@ class MyApp extends StatelessWidget {
       ),
 
       // ── Typographie ──────────────────────────────────────────────────────
-      textTheme: const TextTheme(
+      textTheme: TextTheme(
         // Grands titres — nom d'album en détail
         headlineMedium: TextStyle(
-          color: SpiColors.texte,
+          color: p.encre,
           fontSize: 26.0,
           fontWeight: FontWeight.w800,
           letterSpacing: 1.0,
           height: 1.2,
         ),
         headlineSmall: TextStyle(
-          color: SpiColors.texte,
+          color: p.encre,
           fontSize: 22.0,
           fontWeight: FontWeight.w700,
           letterSpacing: 1.5,
         ),
         // Titres de cartes
         titleLarge: TextStyle(
-          color: SpiColors.texte,
+          color: p.encre,
           fontSize: 17.0,
           fontWeight: FontWeight.w700,
           letterSpacing: 0.8,
         ),
         titleMedium: TextStyle(
-          color: SpiColors.texte,
+          color: p.encre,
           fontSize: 15.0,
           fontWeight: FontWeight.w600,
           letterSpacing: 0.3,
         ),
         titleSmall: TextStyle(
-          color: SpiColors.texte,
+          color: p.encre,
           fontSize: 13.0,
           fontWeight: FontWeight.w600,
         ),
         // Corps de texte
         bodyLarge: TextStyle(
-          color: SpiColors.texte,
+          color: p.encre,
           fontSize: 15.0,
           height: 1.5,
         ),
         bodyMedium: TextStyle(
-          color: SpiColors.texte,
+          color: p.encre,
           fontSize: 13.0,
           height: 1.4,
         ),
         // Textes secondaires — date, nb photos…
         bodySmall: TextStyle(
-          color: SpiColors.texteMuted,
+          color: p.encreSecondaire,
           fontSize: 12.0,
           letterSpacing: 0.4,
         ),
         labelSmall: TextStyle(
-          color: SpiColors.texteMuted,
+          color: p.encreSecondaire,
           fontSize: 10.0,
           letterSpacing: 1.0,
           fontWeight: FontWeight.w500,

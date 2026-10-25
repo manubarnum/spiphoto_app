@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:spiphoto_app/spi_colors.dart';
 import 'package:spiphoto_app/interface/compte_sheet.dart';
 import 'package:spiphoto_app/service/auth_service.dart';
+import 'package:spiphoto_app/service/theme_service.dart';
 
 class MyAppBarAccueil extends StatelessWidget implements PreferredSizeWidget {
   /// Appelé au tap sur le logo : retour à l'accueil.
@@ -26,9 +27,11 @@ class MyAppBarAccueil extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool sombre = Theme.of(context).brightness == Brightness.dark;
+
     return AppBar(
       // ── Fond avec légère bordure basse ──────────────────────────────────
-      backgroundColor: SpiColors.surface,
+      backgroundColor: context.spi.surface,
       bottom: PreferredSize(
         preferredSize: const Size.fromHeight(1),
         child: Container(
@@ -55,10 +58,10 @@ class MyAppBarAccueil extends StatelessWidget implements PreferredSizeWidget {
       ),
 
       // ── Titre centré — style magazine ───────────────────────────────────
-      title: const Text(
+      title: Text(
         'SPIPHOTO',
         style: TextStyle(
-          color: SpiColors.texte,
+          color: context.spi.encre,
           fontSize: 16.0,
           fontWeight: FontWeight.w800,
           letterSpacing: 4.0,
@@ -70,13 +73,26 @@ class MyAppBarAccueil extends StatelessWidget implements PreferredSizeWidget {
       actions: [
         // Bouton lien site WordPress
         IconButton(
-          icon: const Icon(
+          icon: Icon(
             Icons.language,
-            color: SpiColors.texte,
+            color: context.spi.encre,
             size: 22,
           ),
           tooltip: 'Site SPIPHOTO',
           onPressed: () => _launchSite(context),
+        ),
+
+        // Jour / nuit — comme la bascule du site : soleil la nuit, lune
+        // le jour (l'icône montre le mode vers lequel on bascule).
+        IconButton(
+          icon: Icon(
+            sombre ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
+            color: context.spi.encre,
+            size: 22,
+          ),
+          tooltip: sombre ? 'Mode jour' : 'Mode nuit',
+          onPressed: () =>
+              ThemeService.instance.basculer(sombreAffiche: sombre),
         ),
 
         // Compte : photo Google une fois connecté, pictogramme sinon
@@ -91,13 +107,13 @@ class MyAppBarAccueil extends StatelessWidget implements PreferredSizeWidget {
                 icon: photo != null
                     ? CircleAvatar(
                         radius: 13,
-                        backgroundColor: SpiColors.surfaceHigh,
+                        backgroundColor: context.spi.surfaceElevee,
                         backgroundImage: NetworkImage(photo),
                       )
-                    : const Icon(
+                    : Icon(
                         Icons.account_circle_outlined,
                         color:
-                            SpiColors.mauveClair, // mauve — distingue le profil
+                            context.spi.accent, // mauve — distingue le profil
                         size: 26,
                       ),
                 tooltip: 'Mon compte',

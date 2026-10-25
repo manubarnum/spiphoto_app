@@ -25,18 +25,18 @@ class _AlbumDetailsScreenState extends State<AlbumDetailsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: SpiColors.noir,
+      backgroundColor: context.spi.fond,
 
       // ── AppBar locale avec bouton retour ──────────────────────────────
       appBar: AppBar(
-        backgroundColor: SpiColors.surface,
+        backgroundColor: context.spi.surface,
         elevation: 0,
         scrolledUnderElevation: 0,
 
         // Bouton retour
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new, size: 20),
-          color: SpiColors.texte,
+          color: context.spi.encre,
           tooltip: 'Retour',
           onPressed: () => Navigator.of(context).pop(),
         ),
@@ -46,8 +46,8 @@ class _AlbumDetailsScreenState extends State<AlbumDetailsScreen> {
           widget.album.title,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: const TextStyle(
-            color: SpiColors.texte,
+          style: TextStyle(
+            color: context.spi.encre,
             fontSize: 15.0,
             fontWeight: FontWeight.w700,
             letterSpacing: 1.0,
@@ -111,7 +111,7 @@ class _AlbumDetailsScreenState extends State<AlbumDetailsScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(Icons.photo_library_outlined,
-                      color: SpiColors.texteMuted, size: 48),
+                      color: context.spi.encreSecondaire, size: 48),
                   const SizedBox(height: 16),
                   Text(
                     'Aucune image dans cet album',
@@ -143,8 +143,8 @@ class _AlbumDetailsScreenState extends State<AlbumDetailsScreen> {
                               if (widget.album.authorName != null)
                                 TextSpan(
                                   text: '  par ${widget.album.authorName}',
-                                  style: const TextStyle(
-                                    color: SpiColors.texteMuted,
+                                  style: TextStyle(
+                                    color: context.spi.encreSecondaire,
                                     fontSize: 13,
                                     fontWeight: FontWeight.w400,
                                     letterSpacing: 0.4,
@@ -161,7 +161,7 @@ class _AlbumDetailsScreenState extends State<AlbumDetailsScreen> {
                             ? '${imageInfos.length} photos'
                             : '${imageInfos.length} photo',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: SpiColors.mauveClair,
+                              color: context.spi.accent,
                               fontWeight: FontWeight.w600,
                             ),
                       ),

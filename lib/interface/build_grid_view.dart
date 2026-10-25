@@ -91,14 +91,14 @@ class _VignettePhoto extends StatelessWidget {
             loadingBuilder: (context, child, loadingProgress) {
               if (loadingProgress == null) return child;
               return Container(
-                color: SpiColors.surface,
+                color: context.spi.surface,
                 child: Center(
                   child: CircularProgressIndicator(
                     value: loadingProgress.expectedTotalBytes != null
                         ? loadingProgress.cumulativeBytesLoaded /
                             (loadingProgress.expectedTotalBytes ?? 1)
                         : null,
-                    color: SpiColors.mauve,
+                    color: context.spi.mauve,
                   ),
                 ),
               );
@@ -109,10 +109,10 @@ class _VignettePhoto extends StatelessWidget {
               imageInfos[index].fallbackUrl,
               fit: BoxFit.cover,
               errorBuilder: (context, error, stackTrace) => Container(
-                color: SpiColors.surfaceAlt,
-                child: const Icon(
+                color: context.spi.surfaceAlt,
+                child: Icon(
                   Icons.broken_image_outlined,
-                  color: SpiColors.texteMuted,
+                  color: context.spi.encreSecondaire,
                 ),
               ),
             ),
