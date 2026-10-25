@@ -13,8 +13,6 @@ import io.flutter.embedding.engine.FlutterEngineCache
 import io.flutter.embedding.engine.dart.DartExecutor
 import io.flutter.plugin.common.MethodChannel
 import kotlinx.coroutines.*
-import java.io.File
-import java.io.FileOutputStream
 import java.net.HttpURLConnection
 import java.net.URL
 
@@ -50,6 +48,9 @@ class MainActivity: FlutterActivity() {
             MethodChannel(messenger, CHANNEL).setMethodCallHandler { call, result ->
                 if (call.method == "setWallpaper") {
                     val imageUrl = call.argument<String>("imageUrl")
+                    // Fichier de l'image dans le cache disque côté Flutter,
+                    // quand l'aperçu l'a déjà chargée.
+                    val imagePath = call.argument<String>("imagePath")
                     val wallpaperType = call.argument<Int>("wallpaperType")
                     // Zone à conserver [gauche, haut, droite, bas], en fractions
                     // de l'image (0..1). Optionnelle : image entière si absente.
@@ -58,7 +59,7 @@ class MainActivity: FlutterActivity() {
                     if (imageUrl != null && wallpaperType != null) {
                         // Lancer une coroutine pour définir le fond d'écran
                         CoroutineScope(Dispatchers.Main).launch {
-                            val success = setWallpaper(imageUrl, wallpaperType, crop)
+                            val success = setWallpaper(imageUrl, imagePath, wallpaperType, crop)
                             if (success) {
                                 result.success("Fond d'écran défini avec succès")
                             } else {
@@ -76,29 +77,13 @@ class MainActivity: FlutterActivity() {
     }
 
     // Fonction suspendue pour définir le fond d'écran avec coroutines
-    private suspend fun setWallpaper(imageUrl: String, wallpaperType: Int, crop: List<Double>?): Boolean {
+    private suspend fun setWallpaper(imageUrl: String, imagePath: String?, wallpaperType: Int, crop: List<Double>?): Boolean {
         return withContext(Dispatchers.IO) {
             var bitmap: Bitmap? = null
             try {
-                // Télécharger l'image depuis l'URL — connexion + flux fermés
-                // via .use{} même en cas d'exception pendant le décodage.
-                val connection: HttpURLConnection = URL(imageUrl).openConnection() as HttpURLConnection
-                connection.doInput = true
-                connection.connect()
-                try {
-                    bitmap = connection.inputStream.use { input -> BitmapFactory.decodeStream(input) }
-                } finally {
-                    connection.disconnect()
-                }
-
+                // Image lue dans le cache disque si possible, téléchargée sinon.
+                bitmap = imagePath?.let { BitmapFactory.decodeFile(it) } ?: telecharger(imageUrl)
                 if (bitmap == null) return@withContext false
-
-                // Sauvegarder l'image temporairement dans un répertoire dédié à l'application
-                val directory = getExternalFilesDir(null)
-                val file = File(directory, "wallpaper_temp.jpg")
-                FileOutputStream(file).use { outputStream ->
-                    bitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
-                }
 
                 // Zone choisie dans l'aperçu, passée comme zone visible sur
                 // l'image entière : le système la garde à l'écran et prend
@@ -123,6 +108,19 @@ class MainActivity: FlutterActivity() {
                 // libérer la mémoire native du bitmap ici sans risque.
                 bitmap?.recycle()
             }
+        }
+    }
+
+    // Télécharge l'image depuis l'URL — connexion + flux fermés via .use{}
+    // même en cas d'exception pendant le décodage.
+    private fun telecharger(imageUrl: String): Bitmap? {
+        val connection: HttpURLConnection = URL(imageUrl).openConnection() as HttpURLConnection
+        connection.doInput = true
+        connection.connect()
+        try {
+            return connection.inputStream.use { input -> BitmapFactory.decodeStream(input) }
+        } finally {
+            connection.disconnect()
         }
     }
 

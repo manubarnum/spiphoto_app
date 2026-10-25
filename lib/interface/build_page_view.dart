@@ -108,7 +108,8 @@ class _PageViewScreenState extends State<PageViewScreen> {
   Future<void> _partager() async {
     final ScaffoldMessengerState messager = ScaffoldMessenger.of(context);
     try {
-      await _shareService.shareImage(_photo.landscapeUrl, _photo.description);
+      // La taille écran, celle affichée : elle est déjà dans le cache disque.
+      await _shareService.shareImage(_photo.ecranUrl, _photo.description);
     } catch (e) {
       messager.showSnackBar(
         SnackBar(content: Text('Erreur lors du partage de l\'image : $e')),
