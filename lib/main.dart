@@ -263,7 +263,10 @@ class _ScaffoldWithNavigationState extends State<ScaffoldWithNavigation> {
         }
         return MaterialPageRoute(
           builder: (_) => Scaffold(
-            appBar: MyAppBarAccueil(onLogoTap: _revenirAccueil),
+            appBar: MyAppBarAccueil(
+              onLogoTap: _revenirAccueil,
+              onMesFavoris: () => setState(() => _currentIndex = 1),
+            ),
             body: child,
           ),
         );
