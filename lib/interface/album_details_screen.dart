@@ -133,15 +133,33 @@ class _AlbumDetailsScreenState extends State<AlbumDetailsScreen> {
                     crossAxisAlignment: CrossAxisAlignment.baseline,
                     textBaseline: TextBaseline.alphabetic,
                     children: [
+                      // Auteur à la suite du titre, sur la même ligne
+                      // de base, en métadonnée discrète.
                       Expanded(
-                        child: Text(
-                          widget.album.title,
+                        child: Text.rich(
+                          TextSpan(
+                            text: widget.album.title,
+                            children: [
+                              if (widget.album.authorName != null)
+                                TextSpan(
+                                  text: '  par ${widget.album.authorName}',
+                                  style: const TextStyle(
+                                    color: SpiColors.texteMuted,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w400,
+                                    letterSpacing: 0.4,
+                                  ),
+                                ),
+                            ],
+                          ),
                           style: Theme.of(context).textTheme.headlineSmall,
                         ),
                       ),
                       const SizedBox(width: 12),
                       Text(
-                        '${imageInfos.length} photos',
+                        imageInfos.length > 1
+                            ? '${imageInfos.length} photos'
+                            : '${imageInfos.length} photo',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               color: SpiColors.mauveClair,
                               fontWeight: FontWeight.w600,
@@ -163,10 +181,8 @@ class _AlbumDetailsScreenState extends State<AlbumDetailsScreen> {
 
               // Grille
               SliverPadding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-                sliver: SliverToBoxAdapter(
-                  child: buildGridView(context, imageInfos),
-                ),
+                padding: const EdgeInsets.fromLTRB(15, 0, 15, 24),
+                sliver: buildSliverGridView(context, imageInfos),
               ),
             ],
           );

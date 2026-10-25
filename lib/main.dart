@@ -38,6 +38,17 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: _buildTheme(),
       home: const ScaffoldWithNavigation(),
+      // Routes ouvertes par-dessus les onglets (sans nav basse ni barre
+      // d'accueil) : à pousser avec Navigator.of(context, rootNavigator: true).
+      onGenerateRoute: (settings) {
+        if (settings.name == '/album_details_screen') {
+          final album = settings.arguments as Album;
+          return MaterialPageRoute(
+            builder: (_) => AlbumDetailsScreen(album: album),
+          );
+        }
+        return null;
+      },
     );
   }
 
@@ -232,12 +243,6 @@ class _ScaffoldWithNavigationState extends State<ScaffoldWithNavigation> {
     return Navigator(
       key: _navigatorKeys[index],
       onGenerateRoute: (settings) {
-        if (settings.name == '/album_details_screen') {
-          final album = settings.arguments as Album;
-          return MaterialPageRoute(
-            builder: (_) => AlbumDetailsScreen(album: album),
-          );
-        }
         return MaterialPageRoute(builder: (_) => child);
       },
     );
