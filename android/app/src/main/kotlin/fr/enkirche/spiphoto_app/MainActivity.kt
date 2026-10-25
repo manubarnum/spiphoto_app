@@ -12,7 +12,6 @@ import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.embedding.engine.FlutterEngineCache
 import io.flutter.embedding.engine.dart.DartExecutor
 import io.flutter.plugin.common.MethodChannel
-import io.flutter.plugins.GeneratedPluginRegistrant
 import kotlinx.coroutines.*
 import java.io.File
 import java.io.FileOutputStream
@@ -30,12 +29,12 @@ class MainActivity: FlutterActivity() {
     // Android 12+, ce qui recrée l'activité. Avec le moteur par défaut,
     // l'app Dart repartait alors de zéro, sur l'accueil. Un moteur en cache
     // survit à la recréation : l'activité s'y rebranche avec l'état intact.
-    // Un moteur fourni ainsi n'est pas détruit avec l'activité, mais ses
-    // plugins doivent être enregistrés ici (FlutterActivity ne le fait pas).
+    // Un moteur fourni ainsi n'est pas détruit avec l'activité. Ses plugins
+    // sont enregistrés par le constructeur FlutterEngine(context) lui-même
+    // (automaticallyRegisterPlugins) : ne pas les réenregistrer ici.
     override fun provideFlutterEngine(context: Context): FlutterEngine {
         return FlutterEngineCache.getInstance().get(ENGINE_ID)
             ?: FlutterEngine(context.applicationContext).also { engine ->
-                GeneratedPluginRegistrant.registerWith(engine)
                 engine.dartExecutor.executeDartEntrypoint(
                     DartExecutor.DartEntrypoint.createDefault()
                 )
