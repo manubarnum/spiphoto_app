@@ -111,28 +111,6 @@ class FavoritesService {
         album: data['albumTitle'] as String?,
       );
 
-  /// Lecture PONCTUELLE (une seule fois, pas de mise à jour automatique).
-  /// Utile quand on veut juste vérifier une valeur sans "écouter" en continu.
-  Future<List<String>> getFavoritesOnce() async {
-    final uid = _uid;
-    if (uid == null) return <String>[];
-
-    final snapshot =
-        await _eventsCollection.where('userId', isEqualTo: uid).get();
-    return snapshot.docs
-        .map((doc) => doc.data()['photoUrl'] as String?)
-        .whereType<String>()
-        .toList();
-  }
-
-  /// Vérifie si une photo donnée est déjà dans les favoris.
-  /// Utilisé pour savoir si le cœur doit être plein ou vide au chargement
-  /// de la visionneuse plein écran.
-  Future<bool> isFavorite(String photoUrl) async {
-    final favorites = await getFavoritesOnce();
-    return favorites.contains(photoUrl);
-  }
-
   /// Ajoute une photo aux favoris.
   /// - Ne fait rien si personne n'est connecté (sécurité silencieuse).
   /// - Idempotent : si l'événement existe déjà (double appel, tap répété),
