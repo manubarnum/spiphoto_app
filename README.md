@@ -90,7 +90,7 @@ assets/
 
 ### Prérequis
 
-- [Flutter SDK](https://flutter.dev/docs/get-started/install) récent (testé avec **Flutter 3.47.8**) — il impose Gradle ≥ 8.14 et Android Gradle Plugin ≥ 8.11.1, déjà configurés dans le projet (Gradle 8.14.3, AGP 8.11.1)
+- [Flutter SDK](https://flutter.dev/docs/get-started/install) récent (testé avec **Flutter 3.47.8**) — le projet utilise Gradle 9.3.1, Android Gradle Plugin 9.1.0 et Kotlin 2.4.0, les versions des modèles de Flutter
 - Android Studio et un SDK Android
 - Un appareil Android ou un émulateur
 
