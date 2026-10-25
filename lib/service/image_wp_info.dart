@@ -1,20 +1,27 @@
 // image_wp_info.dart
 
+/// Extension d'un fichier image WordPress. Les copies WebP générées par
+/// Perfect Images gardent l'extension d'origine : « photo-150x150.jpeg.webp ».
+const String _wpImageExtension = r'\.[a-zA-Z]+(?:\.webp)?$';
+final RegExp _wpImageExtensionPattern = RegExp(_wpImageExtension);
+
 /// Suffixe de taille ajouté par WordPress aux fichiers image (ex. "-150x150",
 /// "-300x300"). Ce réglage ("Taille des vignettes") a changé au fil du temps
 /// sur le site — on le détecte donc par motif plutôt que par valeur fixe.
-final RegExp wpImageSizeSuffix = RegExp(r'-\d+x\d+(?=\.[a-zA-Z]+$)');
+final RegExp wpImageSizeSuffix = RegExp('-\\d+x\\d+(?=$_wpImageExtension)');
 
 /// Retire le suffixe de taille WordPress d'une URL pour retrouver le nom de
 /// fichier de l'image originale (plein format).
 String stripWpImageSize(String url) => url.replaceFirst(wpImageSizeSuffix, '');
 
 /// Insère un suffixe de taille avant l'extension d'une URL déjà dépourvue
-/// de suffixe (voir [stripWpImageSize]).
+/// de suffixe (voir [stripWpImageSize]), double extension WebP comprise :
+/// « photo.jpeg.webp » donne « photo-320x320.jpeg.webp ».
 String insertWpImageSize(String baseUrl, String suffix) {
-  final int lastDot = baseUrl.lastIndexOf('.');
-  if (lastDot == -1) return baseUrl;
-  return '${baseUrl.substring(0, lastDot)}$suffix${baseUrl.substring(lastDot)}';
+  final Match? extension = _wpImageExtensionPattern.firstMatch(baseUrl);
+  if (extension == null) return baseUrl;
+  final int debut = extension.start;
+  return '${baseUrl.substring(0, debut)}$suffix${baseUrl.substring(debut)}';
 }
 
 class ImageWpInfo {
