@@ -52,7 +52,6 @@ class PageViewScreen extends StatefulWidget {
 class _PageViewScreenState extends State<PageViewScreen> {
   late final PageController _pageController;
   late int _currentIndex;
-  final WallpaperScreen _wallpaperScreen = WallpaperScreen();
   final ShareService _shareService = ShareService();
 
   // URLs favorites de l'utilisateur connecté — tenu à jour en temps réel
@@ -245,9 +244,13 @@ class _PageViewScreenState extends State<PageViewScreen> {
                         const SizedBox(height: 20),
                         _BarreActions(
                           isFav: isFav,
-                          onFondEcran: () =>
-                              _wallpaperScreen.showWallpaperDialog(
-                                  context, _photo.landscapeUrl),
+                          onFondEcran: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => WallpaperPreviewScreen(
+                                  imageUrl: _photo.landscapeUrl),
+                            ),
+                          ),
                           onFavori: _toggleFavorite,
                           onPartager: () => _shareService.shareImageOnInstagram(
                               context, _photo.landscapeUrl, _photo.description),
