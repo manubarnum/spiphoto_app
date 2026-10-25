@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:spiphoto_app/service/image_wp_info.dart';
 
 /// Gère les favoris de l'utilisateur connecté, stockés dans Firestore.
@@ -7,8 +8,10 @@ import 'package:spiphoto_app/service/image_wp_info.dart';
 /// Modèle de données (voir firestore.rules) :
 ///   favoriteEvents/{uid}_{mediaId}   — un document par favori individuel
 ///       { userId, mediaId, photoUrl, vignetteUrl, ecranUrl, createdAt }
-///   photoStats/{mediaId}.favoriteCount — compteur agrégé par photo,
-///       partagé entre tous les utilisateurs.
+///   photoStats/{mediaId} — une fiche par photo, partagée entre tous les
+///       utilisateurs : compteur favoriteCount, et de quoi afficher le fil
+///       du Club sans relire les événements (photoUrl, vignetteUrl, ecranUrl,
+///       albumTitle, lastAddedAt, membres.{uid}: {nom, photo, ajout}).
 /// mediaId est l'identifiant du média WordPress (voir ImageWpInfo.mediaId).
 ///
 /// L'ajout et le retrait touchent les deux collections dans une seule
@@ -103,9 +106,9 @@ class FavoritesService {
   /// - favoriteEvents et photoStats sont écrits dans la même transaction :
   ///   soit les deux réussissent, soit aucun n'est modifié.
   /// - Le nom, l'avatar du membre et l'album (si connu) sont copiés dans
-  ///   l'événement pour le fil du Club : aucun profil membre n'existe
-  ///   ailleurs dans Firestore. Un changement de nom ultérieur n'est pas
-  ///   répercuté (les événements ne sont jamais modifiés).
+  ///   l'événement et dans la fiche photoStats pour le fil du Club : aucun
+  ///   profil membre n'existe ailleurs dans Firestore. Un changement de nom
+  ///   ultérieur n'est pas répercuté.
   Future<void> addFavorite(ImageWpInfo photo, {String? albumTitle}) async {
     final User? user = FirebaseAuth.instance.currentUser;
     final uid = user?.uid;
@@ -132,7 +135,21 @@ class FavoritesService {
       });
       transaction.set(
         statsRef,
-        {'favoriteCount': FieldValue.increment(1)},
+        {
+          'favoriteCount': FieldValue.increment(1),
+          'lastAddedAt': FieldValue.serverTimestamp(),
+          'photoUrl': photo.landscapeUrl,
+          'vignetteUrl': photo.thumbnailUrl,
+          'ecranUrl': photo.ecranUrl,
+          if (albumTitle != null) 'albumTitle': albumTitle,
+          'membres': {
+            uid: {
+              'ajout': FieldValue.serverTimestamp(),
+              if (user?.displayName != null) 'nom': user!.displayName,
+              if (user?.photoURL != null) 'photo': user!.photoURL,
+            },
+          },
+        },
         SetOptions(merge: true),
       );
     });
@@ -144,6 +161,10 @@ class FavoritesService {
   /// - Le compteur est lu dans la transaction puis décrémenté manuellement
   ///   (jamais en dessous de 0) plutôt que via FieldValue.increment(-1), pour
   ///   pouvoir appliquer ce plancher.
+  /// - Le membre sort de la fiche photoStats. Sans plus aucun favori, la
+  ///   photo perd aussi sa date de dernier ajout et sort du tri « dernières ».
+  ///   Sinon cette date reste celle du dernier ajout, même s'il vient d'être
+  ///   retiré.
   Future<void> removeFavorite(ImageWpInfo photo) async {
     final uid = _uid;
     if (uid == null) return;
@@ -164,7 +185,11 @@ class FavoritesService {
       transaction.delete(eventRef);
       transaction.set(
         statsRef,
-        {'favoriteCount': newCount},
+        {
+          'favoriteCount': newCount,
+          if (newCount == 0) 'lastAddedAt': FieldValue.delete(),
+          'membres': {uid: FieldValue.delete()},
+        },
         SetOptions(merge: true),
       );
     });
@@ -182,48 +207,38 @@ class FavoritesService {
   }
 
   /// Fil « Les favoris du Club », selon [tri] :
-  /// - [TriClub.plusChoisies] : par nombre de favoris décroissant, à partir
-  ///   de photoStats (tri sur favoriteCount) ;
+  /// - [TriClub.plusChoisies] : par nombre de favoris décroissant (tri sur
+  ///   favoriteCount) ;
   /// - [TriClub.dernieres] : la photo mise en favori le plus récemment en
-  ///   tête, à partir des derniers événements (tri sur createdAt).
-  /// Les deux ne reposent que sur des index simples, créés automatiquement.
-  /// Les événements de chaque photo donnent ensuite membres et album.
+  ///   tête (tri sur lastAddedAt).
+  /// Une seule requête sur photoStats, dont les fiches portent tout le
+  /// nécessaire à l'affichage : [limite] lectures. Les deux tris ne reposent
+  /// que sur des index simples, créés automatiquement.
   Future<List<FavoriClub>> getFavorisDuClub({
     TriClub tri = TriClub.plusChoisies,
     int limite = 20,
   }) async {
     if (_uid == null) return <FavoriClub>[];
 
-    final List<String> mediaIds;
-    if (tri == TriClub.plusChoisies) {
-      final stats = await _statsCollection
-          .where('favoriteCount', isGreaterThan: 0)
-          .orderBy('favoriteCount', descending: true)
-          .limit(limite)
-          .get();
-      mediaIds = stats.docs.map((doc) => doc.id).toList();
-    } else {
-      // Plusieurs membres peuvent ajouter la même photo : on lit plus
-      // d'événements que de photos voulues, puis on dédoublonne en gardant
-      // l'ordre d'arrivée (un Set Dart conserve l'ordre d'insertion).
-      final events = await _eventsCollection
-          .orderBy('createdAt', descending: true)
-          .limit(limite * 5)
-          .get();
-      mediaIds = events.docs
-          .map((doc) => doc.data()['mediaId'])
-          .whereType<String>()
-          .toSet()
-          .take(limite)
-          .toList();
-    }
+    final Query<Map<String, dynamic>> requete = tri == TriClub.plusChoisies
+        ? _statsCollection
+            .where('favoriteCount', isGreaterThan: 0)
+            .orderBy('favoriteCount', descending: true)
+        : _statsCollection.orderBy('lastAddedAt', descending: true);
+    final stats = await requete.limit(limite).get();
 
-    final List<FavoriClub> fil = (await Future.wait(mediaIds.map(_favoriClub)))
+    // Les fiches écrites par les versions précédentes de l'app n'ont que le
+    // compteur : leur entrée est alors reconstruite à partir des événements.
+    final List<FavoriClub> fil = (await Future.wait(stats.docs.map((doc) =>
+            doc.data()['photoUrl'] is String
+                ? Future.value(favoriClubDepuisFiche(doc.id, doc.data()))
+                : _favoriClub(doc.id))))
         .whereType<FavoriClub>()
+        .where((f) => f.nbFavoris > 0)
         .toList();
 
-    // On retrie sur les valeurs affichées : photoStats peut différer du
-    // décompte réel des événements.
+    // On retrie sur les valeurs affichées : une entrée reconstruite peut
+    // différer de la fiche.
     if (tri == TriClub.plusChoisies) {
       fil.sort((a, b) => b.nbFavoris.compareTo(a.nbFavoris));
     } else {
@@ -232,7 +247,41 @@ class FavoritesService {
     return fil;
   }
 
-  /// Une entrée du fil à partir des événements favoris d'une photo.
+  /// Une entrée du fil à partir de la fiche photoStats d'une photo.
+  @visibleForTesting
+  static FavoriClub favoriClubDepuisFiche(
+      String mediaId, Map<String, dynamic> data) {
+    final Object? membres = data['membres'];
+    // Premiers membres à l'avoir choisie en tête de la liste.
+    final List<Map<String, dynamic>> entrees = membres is Map
+        ? (membres.values
+            .whereType<Map>()
+            .map((m) => Map<String, dynamic>.from(m))
+            .toList()
+          ..sort((a, b) => _comparerDates((a['ajout'] as Timestamp?)?.toDate(),
+              (b['ajout'] as Timestamp?)?.toDate())))
+        : [];
+
+    return FavoriClub(
+      mediaId: mediaId,
+      photoUrl: data['photoUrl'] as String,
+      vignetteUrl: data['vignetteUrl'] as String?,
+      ecranUrl: data['ecranUrl'] as String?,
+      nbFavoris: (data['favoriteCount'] as num?)?.toInt() ?? 0,
+      dernierAjout: (data['lastAddedAt'] as Timestamp?)?.toDate(),
+      membres: entrees
+          .where((m) => m['nom'] is String)
+          .map((m) => MembreFavori(
+                nom: m['nom'] as String,
+                photoUrl: m['photo'] as String?,
+              ))
+          .toList(),
+      albumTitle: data['albumTitle'] as String?,
+    );
+  }
+
+  /// Une entrée du fil à partir des événements favoris d'une photo (fiches
+  /// photoStats des versions précédentes de l'app).
   Future<FavoriClub?> _favoriClub(String mediaId) async {
     final events =
         await _eventsCollection.where('mediaId', isEqualTo: mediaId).get();

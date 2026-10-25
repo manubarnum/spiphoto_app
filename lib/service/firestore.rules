@@ -21,19 +21,34 @@ service cloud.firestore {
       allow update: if false; // jamais de modif, seulement create/delete
     }
 
-    // Compteur agrégé par photo
+    // Fiche par photo : compteur agrégé et données du fil du Club
     match /photoStats/{mediaId} {
+      // Seuls ces champs existent ; chaque membre ne touche qu'à sa propre
+      // entrée membres.{uid}.
+      function champsConnus() {
+        return request.resource.data.keys().hasOnly(['favoriteCount',
+          'lastAddedAt', 'photoUrl', 'vignetteUrl', 'ecranUrl', 'albumTitle',
+          'membres']);
+      }
+
       allow read: if isSpiphotoUser();
 
       allow create: if isSpiphotoUser()
-        && request.resource.data.favoriteCount == 1;
+        && request.resource.data.favoriteCount == 1
+        && champsConnus()
+        && request.resource.data.get('membres', {}).keys()
+          .hasOnly([request.auth.uid]);
 
       allow update: if isSpiphotoUser()
         && request.resource.data.favoriteCount >= 0
         && (
           request.resource.data.favoriteCount == resource.data.favoriteCount + 1 ||
           request.resource.data.favoriteCount == resource.data.favoriteCount - 1
-        );
+        )
+        && champsConnus()
+        && request.resource.data.get('membres', {})
+          .diff(resource.data.get('membres', {})).affectedKeys()
+          .hasOnly([request.auth.uid]);
 
       allow delete: if false;
     }
