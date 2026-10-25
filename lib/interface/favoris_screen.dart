@@ -1,3 +1,4 @@
+import 'package:extended_image/extended_image.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:spiphoto_app/spi_colors.dart';
@@ -61,7 +62,8 @@ class _LoggedInView extends StatelessWidget {
                       radius: 16,
                       backgroundColor: context.spi.surfaceElevee,
                       backgroundImage: user.photoURL != null
-                          ? NetworkImage(user.photoURL!)
+                          ? ExtendedNetworkImageProvider(user.photoURL!,
+                              cache: true)
                           : null,
                       child: user.photoURL == null
                           ? Icon(Icons.person,

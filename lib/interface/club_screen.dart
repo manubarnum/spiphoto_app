@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:extended_image/extended_image.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:spiphoto_app/spi_colors.dart';
@@ -456,17 +457,22 @@ class _Photo extends StatelessWidget {
             MediaQuery.devicePixelRatioOf(context))
         .round();
     final Widget fond = ColoredBox(color: context.spi.surfaceAlt);
-    return Image.network(
+    return ExtendedImage.network(
       photo.landscapeUrl,
       fit: BoxFit.cover,
       cacheWidth: largeur,
-      loadingBuilder: (context, child, progression) =>
-          progression == null ? child : fond,
-      errorBuilder: (_, __, ___) => Image.network(
-        photo.thumbnailUrl,
-        fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => fond,
-      ),
+      loadStateChanged: (state) => switch (state.extendedImageLoadState) {
+        LoadState.loading => fond,
+        LoadState.completed => null,
+        LoadState.failed => ExtendedImage.network(
+            photo.thumbnailUrl,
+            fit: BoxFit.cover,
+            loadStateChanged: (secours) =>
+                secours.extendedImageLoadState == LoadState.completed
+                    ? null
+                    : fond,
+          ),
+      },
     );
   }
 }
@@ -499,7 +505,8 @@ class _PileAvatars extends StatelessWidget {
                 child: CircleAvatar(
                   backgroundColor: context.spi.surfaceElevee,
                   backgroundImage: membres[i].photoUrl != null
-                      ? NetworkImage(membres[i].photoUrl!)
+                      ? ExtendedNetworkImageProvider(membres[i].photoUrl!,
+                          cache: true)
                       : null,
                   child: membres[i].photoUrl == null
                       ? Icon(Icons.person,

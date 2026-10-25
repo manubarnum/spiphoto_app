@@ -1,3 +1,4 @@
+import 'package:extended_image/extended_image.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -108,7 +109,8 @@ class MyAppBarAccueil extends StatelessWidget implements PreferredSizeWidget {
                     ? CircleAvatar(
                         radius: 13,
                         backgroundColor: context.spi.surfaceElevee,
-                        backgroundImage: NetworkImage(photo),
+                        backgroundImage:
+                            ExtendedNetworkImageProvider(photo, cache: true),
                       )
                     : Icon(
                         Icons.account_circle_outlined,

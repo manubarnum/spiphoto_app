@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:extended_image/extended_image.dart';
 import 'package:spiphoto_app/spi_colors.dart';
 import 'package:spiphoto_app/service/image_wp_info.dart';
 import 'package:spiphoto_app/interface/build_page_view.dart';
@@ -85,37 +86,46 @@ class _VignettePhoto extends StatelessWidget {
         ),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(10.5),
-          child: Image.network(
+          child: ExtendedImage.network(
             imageInfos[index].thumbnailUrl, // vignette 320x320
             fit: BoxFit.cover,
-            loadingBuilder: (context, child, loadingProgress) {
-              if (loadingProgress == null) return child;
-              return Container(
-                color: context.spi.surface,
-                child: Center(
-                  child: CircularProgressIndicator(
-                    value: loadingProgress.expectedTotalBytes != null
-                        ? loadingProgress.cumulativeBytesLoaded /
-                            (loadingProgress.expectedTotalBytes ?? 1)
-                        : null,
-                    color: context.spi.mauve,
-                  ),
-                ),
-              );
+            handleLoadingProgress: true,
+            loadStateChanged: (state) {
+              switch (state.extendedImageLoadState) {
+                case LoadState.loading:
+                  final ImageChunkEvent? progression = state.loadingProgress;
+                  return Container(
+                    color: context.spi.surface,
+                    child: Center(
+                      child: CircularProgressIndicator(
+                        value: progression?.expectedTotalBytes != null
+                            ? progression!.cumulativeBytesLoaded /
+                                progression.expectedTotalBytes!
+                            : null,
+                        color: context.spi.mauve,
+                      ),
+                    ),
+                  );
+                case LoadState.completed:
+                  return null;
+                case LoadState.failed:
+                  // Fallback image plein format si la vignette est absente
+                  return ExtendedImage.network(
+                    imageInfos[index].fallbackUrl,
+                    fit: BoxFit.cover,
+                    loadStateChanged: (secours) =>
+                        secours.extendedImageLoadState == LoadState.failed
+                            ? Container(
+                                color: context.spi.surfaceAlt,
+                                child: Icon(
+                                  Icons.broken_image_outlined,
+                                  color: context.spi.encreSecondaire,
+                                ),
+                              )
+                            : null,
+                  );
+              }
             },
-            errorBuilder: (context, error, stackTrace) =>
-                // Fallback image plein format si la vignette est absente
-                Image.network(
-              imageInfos[index].fallbackUrl,
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) => Container(
-                color: context.spi.surfaceAlt,
-                child: Icon(
-                  Icons.broken_image_outlined,
-                  color: context.spi.encreSecondaire,
-                ),
-              ),
-            ),
           ),
         ),
       ),

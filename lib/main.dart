@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:extended_image/extended_image.dart';
 import 'package:spiphoto_app/spi_colors.dart';
 import 'package:spiphoto_app/interface/appbar_accueil.dart';
 import 'package:spiphoto_app/interface/bottom_nav.dart';
@@ -17,6 +20,9 @@ void main() async {
   await Firebase.initializeApp();
   await AuthService.instance.initialize();
   await ThemeService.instance.init();
+  // Cache disque des images (extended_image) : jamais purgé seul. On retire
+  // les fichiers de plus de 30 jours, sans retarder le démarrage.
+  unawaited(clearDiskCachedImages(duration: const Duration(days: 30)));
   // Barre de statut transparente — immersif magazine. La couleur des icônes
   // suit le thème (AppBarTheme.systemOverlayStyle).
   SystemChrome.setSystemUIOverlayStyle(

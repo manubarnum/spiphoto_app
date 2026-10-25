@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:extended_image/extended_image.dart';
 import 'package:spiphoto_app/spi_colors.dart';
 import 'package:spiphoto_app/service/acces_wordpress.dart';
 import 'package:spiphoto_app/service/image_wp_info.dart';
@@ -541,18 +542,25 @@ class _PhotoReseau extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Image.network(
+    return ExtendedImage.network(
       url,
       fit: BoxFit.cover,
       cacheWidth: largeurDecodage,
-      loadingBuilder: (context, child, loadingProgress) =>
-          loadingProgress == null ? child : const _FondPhoto(),
-      errorBuilder: (_, __, ___) => Image.network(
-        urlSecours,
-        fit: BoxFit.cover,
-        cacheWidth: largeurDecodage,
-        errorBuilder: (_, __, ___) => const _FondPhoto(enErreur: true),
-      ),
+      loadStateChanged: (state) => switch (state.extendedImageLoadState) {
+        LoadState.loading => const _FondPhoto(),
+        LoadState.completed => null,
+        LoadState.failed => ExtendedImage.network(
+            urlSecours,
+            fit: BoxFit.cover,
+            cacheWidth: largeurDecodage,
+            loadStateChanged: (secours) =>
+                switch (secours.extendedImageLoadState) {
+              LoadState.loading => const _FondPhoto(),
+              LoadState.completed => null,
+              LoadState.failed => const _FondPhoto(enErreur: true),
+            },
+          ),
+      },
     );
   }
 }
