@@ -98,8 +98,13 @@ class FavoritesService {
   ///   on ne réincrémente pas le compteur une seconde fois.
   /// - favoriteEvents et photoStats sont écrits dans la même transaction :
   ///   soit les deux réussissent, soit aucun n'est modifié.
-  Future<void> addFavorite(String photoUrl) async {
-    final uid = _uid;
+  /// - Le nom, l'avatar du membre et l'album (si connu) sont copiés dans
+  ///   l'événement pour le fil du Club : aucun profil membre n'existe
+  ///   ailleurs dans Firestore. Un changement de nom ultérieur n'est pas
+  ///   répercuté (les événements ne sont jamais modifiés).
+  Future<void> addFavorite(String photoUrl, {String? albumTitle}) async {
+    final User? user = FirebaseAuth.instance.currentUser;
+    final uid = user?.uid;
     if (uid == null) return;
 
     final String mediaId = _mediaIdFor(photoUrl);
@@ -115,6 +120,9 @@ class FavoritesService {
         'mediaId': mediaId,
         'photoUrl': photoUrl,
         'createdAt': FieldValue.serverTimestamp(),
+        if (user?.displayName != null) 'userName': user!.displayName,
+        if (user?.photoURL != null) 'userPhoto': user!.photoURL,
+        if (albumTitle != null) 'albumTitle': albumTitle,
       });
       transaction.set(
         statsRef,
@@ -158,11 +166,137 @@ class FavoritesService {
 
   /// Bascule l'état favori d'une photo : l'ajoute si elle est absente,
   /// la retire si elle est déjà favorite.
-  Future<void> toggleFavorite(String photoUrl, bool isCurrentlyFavorite) async {
+  Future<void> toggleFavorite(String photoUrl, bool isCurrentlyFavorite,
+      {String? albumTitle}) async {
     if (isCurrentlyFavorite) {
       await removeFavorite(photoUrl);
     } else {
-      await addFavorite(photoUrl);
+      await addFavorite(photoUrl, albumTitle: albumTitle);
     }
   }
+
+  /// Fil « Les favoris du Club », selon [tri] :
+  /// - [TriClub.plusChoisies] : par nombre de favoris décroissant, à partir
+  ///   de photoStats (tri sur favoriteCount) ;
+  /// - [TriClub.dernieres] : la photo mise en favori le plus récemment en
+  ///   tête, à partir des derniers événements (tri sur createdAt).
+  /// Les deux ne reposent que sur des index simples, créés automatiquement.
+  /// Les événements de chaque photo donnent ensuite membres et album.
+  Future<List<FavoriClub>> getFavorisDuClub({
+    TriClub tri = TriClub.plusChoisies,
+    int limite = 20,
+  }) async {
+    if (_uid == null) return <FavoriClub>[];
+
+    final List<String> mediaIds;
+    if (tri == TriClub.plusChoisies) {
+      final stats = await _statsCollection
+          .where('favoriteCount', isGreaterThan: 0)
+          .orderBy('favoriteCount', descending: true)
+          .limit(limite)
+          .get();
+      mediaIds = stats.docs.map((doc) => doc.id).toList();
+    } else {
+      // Plusieurs membres peuvent ajouter la même photo : on lit plus
+      // d'événements que de photos voulues, puis on dédoublonne en gardant
+      // l'ordre d'arrivée (un Set Dart conserve l'ordre d'insertion).
+      final events = await _eventsCollection
+          .orderBy('createdAt', descending: true)
+          .limit(limite * 5)
+          .get();
+      mediaIds = events.docs
+          .map((doc) => doc.data()['mediaId'])
+          .whereType<String>()
+          .toSet()
+          .take(limite)
+          .toList();
+    }
+
+    final List<FavoriClub> fil = (await Future.wait(mediaIds.map(_favoriClub)))
+        .whereType<FavoriClub>()
+        .toList();
+
+    // On retrie sur les valeurs affichées : photoStats peut différer du
+    // décompte réel des événements.
+    if (tri == TriClub.plusChoisies) {
+      fil.sort((a, b) => b.nbFavoris.compareTo(a.nbFavoris));
+    } else {
+      fil.sort((a, b) => _comparerDates(b.dernierAjout, a.dernierAjout));
+    }
+    return fil;
+  }
+
+  /// Une entrée du fil à partir des événements favoris d'une photo.
+  Future<FavoriClub?> _favoriClub(String mediaId) async {
+    final events =
+        await _eventsCollection.where('mediaId', isEqualTo: mediaId).get();
+    if (events.docs.isEmpty) return null;
+
+    // Premiers membres à l'avoir choisie en tête de la liste.
+    final docs = events.docs.toList()
+      ..sort((a, b) => _comparerDates(
+          (a.data()['createdAt'] as Timestamp?)?.toDate(),
+          (b.data()['createdAt'] as Timestamp?)?.toDate()));
+    final String? photoUrl =
+        docs.map((d) => d.data()['photoUrl']).whereType<String>().firstOrNull;
+    if (photoUrl == null) return null;
+
+    return FavoriClub(
+      photoUrl: photoUrl,
+      nbFavoris: docs.length,
+      dernierAjout: (docs.last.data()['createdAt'] as Timestamp?)?.toDate(),
+      membres: docs
+          .where((d) => d.data()['userName'] is String)
+          .map((d) => MembreFavori(
+                nom: d.data()['userName'] as String,
+                photoUrl: d.data()['userPhoto'] as String?,
+              ))
+          .toList(),
+      albumTitle: docs
+          .map((d) => d.data()['albumTitle'])
+          .whereType<String>()
+          .firstOrNull,
+    );
+  }
+
+  // Ordre chronologique ; une date absente (horodatage serveur pas encore
+  // reçu, donc ajout tout juste fait) compte comme la plus récente.
+  static int _comparerDates(DateTime? a, DateTime? b) {
+    if (a == null) return b == null ? 0 : 1;
+    if (b == null) return -1;
+    return a.compareTo(b);
+  }
+}
+
+/// Ordre du fil du Club.
+enum TriClub { plusChoisies, dernieres }
+
+/// Une photo du fil du Club.
+class FavoriClub {
+  final String photoUrl;
+  final int nbFavoris;
+
+  /// Membres dont le nom est connu (favoris enregistrés avec le profil),
+  /// du premier au dernier à l'avoir choisie. Peut être plus court que
+  /// [nbFavoris] : les favoris plus anciens n'ont pas de nom.
+  final List<MembreFavori> membres;
+  final String? albumTitle;
+
+  /// Date du dernier ajout en favori (tri « dernières ajoutées »).
+  final DateTime? dernierAjout;
+
+  const FavoriClub({
+    required this.photoUrl,
+    required this.nbFavoris,
+    required this.membres,
+    this.albumTitle,
+    this.dernierAjout,
+  });
+}
+
+class MembreFavori {
+  final String nom;
+  final String? photoUrl;
+
+  const MembreFavori({required this.nom, this.photoUrl});
 }

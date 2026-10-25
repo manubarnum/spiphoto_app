@@ -96,8 +96,12 @@ class _PageViewScreenState extends State<PageViewScreen> {
 
     final String url = _photo.landscapeUrl;
     await FavoritesService.instance
-        .toggleFavorite(url, _favoriteUrls.contains(url));
+        .toggleFavorite(url, _favoriteUrls.contains(url), albumTitle: _legende);
   }
+
+  // La légende reprend le titre de l'album : celui de l'écran album, sinon
+  // celui porté par la photo (fil du Club), sinon rien (Mes favoris).
+  String? get _legende => widget.legende ?? _photo.album;
 
   Future<void> _partager() async {
     final ScaffoldMessengerState messager = ScaffoldMessenger.of(context);
@@ -217,9 +221,9 @@ class _PageViewScreenState extends State<PageViewScreen> {
                         mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          if (widget.legende != null)
+                          if (_legende != null)
                             Text(
-                              widget.legende!,
+                              _legende!,
                               maxLines: 3,
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(

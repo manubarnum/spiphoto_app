@@ -25,6 +25,10 @@ class ImageWpInfo {
   final String description;
   final bool isFavorite;
 
+  /// Titre de l'album d'origine, quand il est connu au niveau de la photo
+  /// (fil du Club : chaque photo vient d'un album différent).
+  final String? album;
+
   ImageWpInfo({
     required this.portraitUrl,
     required this.thumbnailUrl,
@@ -32,6 +36,7 @@ class ImageWpInfo {
     required this.landscapeUrl,
     required this.description,
     this.isFavorite = false,
+    this.album,
   });
 
   /// Reconstruit un ImageWpInfo à partir de la seule URL plein format
@@ -44,7 +49,7 @@ class ImageWpInfo {
   /// Exemple :
   ///   .../photo.jpg  →  .../photo-150x150.jpg  (portraitUrl)
   ///                  →  .../photo-320x320.jpg  (thumbnailUrl / fallbackUrl)
-  factory ImageWpInfo.fromFavoriteUrl(String landscapeUrl) {
+  factory ImageWpInfo.fromFavoriteUrl(String landscapeUrl, {String? album}) {
     final String baseUrl = stripWpImageSize(landscapeUrl);
 
     return ImageWpInfo(
@@ -54,6 +59,7 @@ class ImageWpInfo {
       landscapeUrl: baseUrl,
       description: 'Photo favorite',
       isFavorite: true,
+      album: album,
     );
   }
 }

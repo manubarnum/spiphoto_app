@@ -5,6 +5,7 @@ import 'package:spiphoto_app/service/auth_service.dart';
 import 'package:spiphoto_app/service/favorites_service.dart';
 import 'package:spiphoto_app/service/image_wp_info.dart';
 import 'package:spiphoto_app/interface/build_grid_view.dart';
+import 'package:spiphoto_app/interface/connexion_requise.dart';
 
 class FavorisScreen extends StatelessWidget {
   const FavorisScreen({super.key});
@@ -19,78 +20,14 @@ class FavorisScreen extends StatelessWidget {
       builder: (context, snapshot) {
         final user = snapshot.data;
         if (user == null) {
-          return _LoggedOutView();
+          return const ConnexionRequise(
+            icone: Icons.favorite_border,
+            titre: 'Mes Favoris',
+            message: 'Connectez-vous pour accéder\nà vos photos favorites',
+          );
         }
         return _LoggedInView(user: user);
       },
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// ÉTAT NON CONNECTÉ
-// ─────────────────────────────────────────────────────────────────────────────
-class _LoggedOutView extends StatefulWidget {
-  @override
-  State<_LoggedOutView> createState() => _LoggedOutViewState();
-}
-
-class _LoggedOutViewState extends State<_LoggedOutView> {
-  bool _isLoading = false;
-
-  Future<void> _handleSignIn() async {
-    final ScaffoldMessengerState messager = ScaffoldMessenger.of(context);
-    setState(() => _isLoading = true);
-    // Si ça réussit, le StreamBuilder parent bascule automatiquement
-    // vers _LoggedInView — rien d'autre à faire ici.
-    final String? erreur = await AuthService.instance.connecterAvecGoogle();
-    if (erreur != null) {
-      messager.showSnackBar(SnackBar(content: Text(erreur)));
-    }
-    if (mounted) setState(() => _isLoading = false);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.favorite_border, color: context.spi.mauve, size: 64),
-          const SizedBox(height: 20),
-          Text(
-            'Mes Favoris',
-            style: Theme.of(context).textTheme.headlineSmall,
-          ),
-          const SizedBox(height: 12),
-          Text(
-            'Connectez-vous pour accéder\nà vos photos favorites',
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.bodySmall,
-          ),
-          const SizedBox(height: 32),
-          ElevatedButton.icon(
-            onPressed: _isLoading ? null : _handleSignIn,
-            icon: _isLoading
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: SpiColors.texte,
-                    ),
-                  )
-                : const Icon(Icons.login),
-            label:
-                Text(_isLoading ? 'Connexion...' : 'Se connecter avec Google'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: SpiColors.olive,
-              foregroundColor: SpiColors.texte,
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }
