@@ -551,16 +551,23 @@ class _PhotoReseau extends StatelessWidget {
       loadStateChanged: (state) => switch (state.extendedImageLoadState) {
         LoadState.loading => const _FondPhoto(),
         LoadState.completed => null,
-        LoadState.failed => ExtendedImage.network(
-            urlSecours,
-            fit: BoxFit.cover,
-            cacheWidth: largeurDecodage,
-            loadStateChanged: (secours) =>
-                switch (secours.extendedImageLoadState) {
-              LoadState.loading => const _FondPhoto(),
-              LoadState.completed => null,
-              LoadState.failed => const _FondPhoto(enErreur: true),
-            },
+        // Image de secours décodée à la largeur de son cadre : la taille
+        // écran ne doit pas l'être à 1920 px dans une tuile.
+        LoadState.failed => LayoutBuilder(
+            builder: (context, contraintes) => ExtendedImage.network(
+              urlSecours,
+              fit: BoxFit.cover,
+              cacheWidth: largeurDecodage ??
+                  (contraintes.maxWidth *
+                          MediaQuery.devicePixelRatioOf(context))
+                      .round(),
+              loadStateChanged: (secours) =>
+                  switch (secours.extendedImageLoadState) {
+                LoadState.loading => const _FondPhoto(),
+                LoadState.completed => null,
+                LoadState.failed => const _FondPhoto(enErreur: true),
+              },
+            ),
           ),
       },
     );

@@ -109,20 +109,26 @@ class _VignettePhoto extends StatelessWidget {
                 case LoadState.completed:
                   return null;
                 case LoadState.failed:
-                  // Repli sur la taille écran si la vignette est absente
-                  return ExtendedImage.network(
-                    imageInfos[index].ecranUrl,
-                    fit: BoxFit.cover,
-                    loadStateChanged: (secours) =>
-                        secours.extendedImageLoadState == LoadState.failed
-                            ? Container(
-                                color: context.spi.surfaceAlt,
-                                child: Icon(
-                                  Icons.broken_image_outlined,
-                                  color: context.spi.encreSecondaire,
-                                ),
-                              )
-                            : null,
+                  // Repli sur la taille écran si la vignette est absente,
+                  // décodée à la largeur de la tuile (et non à 1920 px).
+                  return LayoutBuilder(
+                    builder: (context, contraintes) => ExtendedImage.network(
+                      imageInfos[index].ecranUrl,
+                      fit: BoxFit.cover,
+                      cacheWidth: (contraintes.maxWidth *
+                              MediaQuery.devicePixelRatioOf(context))
+                          .round(),
+                      loadStateChanged: (secours) =>
+                          secours.extendedImageLoadState == LoadState.failed
+                              ? Container(
+                                  color: context.spi.surfaceAlt,
+                                  child: Icon(
+                                    Icons.broken_image_outlined,
+                                    color: context.spi.encreSecondaire,
+                                  ),
+                                )
+                              : null,
+                    ),
                   );
               }
             },
