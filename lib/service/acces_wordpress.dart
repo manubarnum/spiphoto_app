@@ -65,10 +65,15 @@ class PageAlbums {
 /// Charge une page de 10 albums (taille par défaut de l'API WordPress).
 /// Chaque album embarque le HTML complet de son article (~45 Ko) : on
 /// pagine plutôt que de tout charger d'un coup.
+/// `_fields` ne garde que les champs lus par [Album.fromJson] (environ 20 %
+/// de moins) ; `_links.author` reste nécessaire, sans lui `_embed` ne
+/// renvoie plus l'auteur.
 Future<PageAlbums> fetchAlbums({int page = 1}) async {
   final response = await http.get(
-    Uri.parse(
-        'https://www.spiphoto.fr/wp-json/wp/v2/posts?_embed=author&page=$page'),
+    Uri.parse('https://www.spiphoto.fr/wp-json/wp/v2/posts'
+        '?_embed=author'
+        '&_fields=id,title.rendered,content.rendered,_links.author,_embedded'
+        '&page=$page'),
   );
 
   if (response.statusCode == 200) {
