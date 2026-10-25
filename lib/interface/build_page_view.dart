@@ -51,7 +51,9 @@ class PageViewScreen extends StatefulWidget {
 
 class _PageViewScreenState extends State<PageViewScreen> {
   late final PageController _pageController;
-  late int _currentIndex;
+  // Photo affichée. Un glissement ne reconstruit que ce qui en dépend
+  // (compteur, légende, cœur, indicateurs), pas le PageView ni le voile.
+  late final ValueNotifier<int> _index;
   final ShareService _shareService = ShareService();
 
   // Identifiants des favoris de l'utilisateur connecté — tenu à jour en temps réel
@@ -64,7 +66,7 @@ class _PageViewScreenState extends State<PageViewScreen> {
   @override
   void initState() {
     super.initState();
-    _currentIndex = widget.initialIndex;
+    _index = ValueNotifier(widget.initialIndex);
     _pageController = PageController(initialPage: widget.initialIndex);
     _favoris = _idsFavoris();
     _favorisPartages.addListener(_majFavoris);
@@ -79,11 +81,12 @@ class _PageViewScreenState extends State<PageViewScreen> {
   @override
   void dispose() {
     _pageController.dispose();
+    _index.dispose();
     _favorisPartages.removeListener(_majFavoris);
     super.dispose();
   }
 
-  ImageWpInfo get _photo => widget.imageInfos[_currentIndex];
+  ImageWpInfo get _photo => widget.imageInfos[_index.value];
 
   Future<void> _toggleFavorite() async {
     if (AuthService.instance.currentUser == null) {
@@ -121,8 +124,6 @@ class _PageViewScreenState extends State<PageViewScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final bool isFav = _favoris.contains(_photo.mediaId);
-
     // Écran toujours sombre (centré sur la photo), quel que soit le thème :
     // icônes claires dans la barre d'état.
     return AnnotatedRegion<SystemUiOverlayStyle>(
@@ -136,7 +137,7 @@ class _PageViewScreenState extends State<PageViewScreen> {
             PageView.builder(
               controller: _pageController,
               itemCount: widget.imageInfos.length,
-              onPageChanged: (index) => setState(() => _currentIndex = index),
+              onPageChanged: (index) => _index.value = index,
               itemBuilder: (context, index) => Center(
                 child: AspectRatio(
                   aspectRatio: 2 / 3,
@@ -165,132 +166,135 @@ class _PageViewScreenState extends State<PageViewScreen> {
               ),
             ),
 
-            SafeArea(
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  // ── Haut : retour + compteur ───────────────────────────
-                  Positioned(
-                    top: 14,
-                    left: 14,
-                    right: 14,
-                    child: Row(
-                      children: [
-                        Material(
-                          color: SpiColors.surface.withValues(alpha: 0.65),
-                          shape: const CircleBorder(),
-                          clipBehavior: Clip.antiAlias,
-                          child: InkWell(
-                            onTap: () => Navigator.pop(context),
-                            child: const SizedBox.square(
-                              dimension: 40,
-                              child: Icon(
-                                Icons.arrow_back_ios_new,
-                                color: SpiColors.texte,
-                                size: 20,
-                                semanticLabel: 'Retour',
+            ValueListenableBuilder<int>(
+              valueListenable: _index,
+              builder: (context, index, _) => SafeArea(
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    // ── Haut : retour + compteur ───────────────────────────
+                    Positioned(
+                      top: 14,
+                      left: 14,
+                      right: 14,
+                      child: Row(
+                        children: [
+                          Material(
+                            color: SpiColors.surface.withValues(alpha: 0.65),
+                            shape: const CircleBorder(),
+                            clipBehavior: Clip.antiAlias,
+                            child: InkWell(
+                              onTap: () => Navigator.pop(context),
+                              child: const SizedBox.square(
+                                dimension: 40,
+                                child: Icon(
+                                  Icons.arrow_back_ios_new,
+                                  color: SpiColors.texte,
+                                  size: 20,
+                                  semanticLabel: 'Retour',
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                        const Spacer(),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 13, vertical: 7),
-                          decoration: BoxDecoration(
-                            color: SpiColors.surface.withValues(alpha: 0.65),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Text(
-                            '${_currentIndex + 1} / ${widget.imageInfos.length}',
-                            style: const TextStyle(
-                              color: SpiColors.texte,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              letterSpacing: 1.0,
+                          const Spacer(),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 13, vertical: 7),
+                            decoration: BoxDecoration(
+                              color: SpiColors.surface.withValues(alpha: 0.65),
+                              borderRadius: BorderRadius.circular(20),
                             ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  // ── Bas : légende, auteur, actions, pagination ─────────
-                  Positioned(
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 22),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          if (_legende != null)
-                            Text(
-                              _legende!,
-                              maxLines: 3,
-                              overflow: TextOverflow.ellipsis,
+                            child: Text(
+                              '${index + 1} / ${widget.imageInfos.length}',
                               style: const TextStyle(
                                 color: SpiColors.texte,
-                                fontSize: 15,
-                                height: 1.45,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                letterSpacing: 1.0,
                               ),
                             ),
-                          if (widget.auteur != null) ...[
-                            const SizedBox(height: 9),
-                            Row(
-                              children: [
-                                Container(
-                                  width: 6,
-                                  height: 6,
-                                  decoration: const BoxDecoration(
-                                    color: SpiColors.mauve,
-                                    shape: BoxShape.circle,
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    widget.auteur!.toUpperCase(),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      color: SpiColors.mauveClair,
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w600,
-                                      letterSpacing: 1.6,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                          const SizedBox(height: 20),
-                          _BarreActions(
-                            isFav: isFav,
-                            onFondEcran: () => Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => WallpaperPreviewScreen(
-                                    imageUrl: _photo.landscapeUrl),
-                              ),
-                            ),
-                            onFavori: _toggleFavorite,
-                            onPartager: _partager,
                           ),
-                          if (widget.imageInfos.length > 1) ...[
-                            const SizedBox(height: 16),
-                            _IndicateursPage(
-                              index: _currentIndex,
-                              total: widget.imageInfos.length,
-                            ),
-                          ],
                         ],
                       ),
                     ),
-                  ),
-                ],
+
+                    // ── Bas : légende, auteur, actions, pagination ─────────
+                    Positioned(
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 0, 20, 22),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (_legende != null)
+                              Text(
+                                _legende!,
+                                maxLines: 3,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  color: SpiColors.texte,
+                                  fontSize: 15,
+                                  height: 1.45,
+                                ),
+                              ),
+                            if (widget.auteur != null) ...[
+                              const SizedBox(height: 9),
+                              Row(
+                                children: [
+                                  Container(
+                                    width: 6,
+                                    height: 6,
+                                    decoration: const BoxDecoration(
+                                      color: SpiColors.mauve,
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      widget.auteur!.toUpperCase(),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        color: SpiColors.mauveClair,
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w600,
+                                        letterSpacing: 1.6,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                            const SizedBox(height: 20),
+                            _BarreActions(
+                              isFav: _favoris.contains(_photo.mediaId),
+                              onFondEcran: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => WallpaperPreviewScreen(
+                                      imageUrl: _photo.landscapeUrl),
+                                ),
+                              ),
+                              onFavori: _toggleFavorite,
+                              onPartager: _partager,
+                            ),
+                            if (widget.imageInfos.length > 1) ...[
+                              const SizedBox(height: 16),
+                              _IndicateursPage(
+                                index: index,
+                                total: widget.imageInfos.length,
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ],
