@@ -11,10 +11,15 @@ class Album {
   final int id;
   String title;
 
+  /// Nom affiché de l'auteur, embarqué par WordPress via `_embed=author`.
+  /// Null si l'auteur n'est pas fourni (compte supprimé, endpoint bloqué…).
+  final String? authorName;
+
   Album({
     required this.content,
     required this.id,
     required this.title,
+    this.authorName,
   }) {
     title = title.replaceAll('&rsquo;', '\u2019');
   }
@@ -25,21 +30,58 @@ class Album {
       id: json['id'] is int ? json['id'] : 0,
       title:
           json['title']['rendered'] is String ? json['title']['rendered'] : '',
+      authorName: _authorNameFrom(json),
     );
+  }
+
+  static String? _authorNameFrom(Map<String, dynamic> json) {
+    final authors = json['_embedded']?['author'];
+    if (authors is List && authors.isNotEmpty && authors.first is Map) {
+      final name = authors.first['name'];
+      if (name is String && name.isNotEmpty) return name;
+    }
+    return null;
   }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // FETCH ALBUMS
 // ─────────────────────────────────────────────────────────────────────────────
-Future<List<Album>> fetchAlbums() async {
+
+/// Une page d'albums, avec les totaux renvoyés par WordPress dans les
+/// en-têtes X-WP-Total et X-WP-TotalPages.
+class PageAlbums {
+  final List<Album> albums;
+  final int total;
+  final int totalPages;
+
+  const PageAlbums({
+    required this.albums,
+    required this.total,
+    required this.totalPages,
+  });
+}
+
+/// Charge une page de 10 albums (taille par défaut de l'API WordPress).
+/// Chaque album embarque le HTML complet de son article (~45 Ko) : on
+/// pagine plutôt que de tout charger d'un coup.
+Future<PageAlbums> fetchAlbums({int page = 1}) async {
   final response = await http.get(
-    Uri.parse('https://www.spiphoto.fr/wp-json/wp/v2/posts'),
+    Uri.parse(
+        'https://www.spiphoto.fr/wp-json/wp/v2/posts?_embed=author&page=$page'),
   );
 
   if (response.statusCode == 200) {
     final List<dynamic> jsonList = jsonDecode(response.body);
-    return jsonList.map((json) => Album.fromJson(json)).toList();
+    final List<Album> albums =
+        jsonList.map((json) => Album.fromJson(json)).toList();
+    return PageAlbums(
+      albums: albums,
+      total:
+          int.tryParse(response.headers['x-wp-total'] ?? '') ?? albums.length,
+      totalPages:
+          int.tryParse(response.headers['x-wp-totalpages'] ?? '') ?? page,
+    );
   } else {
     throw Exception(
         'Impossible de charger les albums (${response.statusCode})');

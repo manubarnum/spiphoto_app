@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:spiphoto_app/spi_colors.dart';
 import 'package:spiphoto_app/interface/appbar_accueil.dart';
+import 'package:spiphoto_app/interface/bottom_nav.dart';
 import 'package:spiphoto_app/interface/album_list.dart';
 import 'package:spiphoto_app/interface/album_details_screen.dart';
 import 'package:spiphoto_app/interface/favoris_screen.dart';
@@ -81,26 +82,6 @@ class MyApp extends StatelessWidget {
           color: SpiColors.texte,
           size: 24.0,
         ),
-      ),
-
-      // ── BottomNavigationBar ─────────────────────────────────────────────
-      bottomNavigationBarTheme: const BottomNavigationBarThemeData(
-        backgroundColor: SpiColors.surface,
-        selectedItemColor: SpiColors.mauve, // mauve pour l'actif
-        unselectedItemColor: SpiColors.texteMuted,
-        selectedLabelStyle: TextStyle(
-          fontWeight: FontWeight.w700,
-          fontSize: 11,
-          letterSpacing: 0.5,
-        ),
-        unselectedLabelStyle: TextStyle(
-          fontWeight: FontWeight.w400,
-          fontSize: 11,
-        ),
-        showSelectedLabels: true,
-        showUnselectedLabels: true,
-        type: BottomNavigationBarType.fixed,
-        elevation: 8,
       ),
 
       // ── Cards ────────────────────────────────────────────────────────────
@@ -284,26 +265,9 @@ class _ScaffoldWithNavigationState extends State<ScaffoldWithNavigation> {
             _buildNavigator(2, const ClubScreen()),
           ],
         ),
-        bottomNavigationBar: BottomNavigationBar(
+        bottomNavigationBar: SpiBottomNav(
           currentIndex: _currentIndex,
           onTap: (index) => setState(() => _currentIndex = index),
-          items: const [
-            BottomNavigationBarItem(
-              icon: Icon(Icons.photo_library_outlined),
-              activeIcon: Icon(Icons.photo_library),
-              label: 'Albums',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.favorite_border),
-              activeIcon: Icon(Icons.favorite),
-              label: 'Mes favoris',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.groups_outlined),
-              activeIcon: Icon(Icons.groups),
-              label: 'Club',
-            ),
-          ],
         ),
       ),
     );

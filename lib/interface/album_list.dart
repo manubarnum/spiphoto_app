@@ -3,8 +3,8 @@ import 'package:spiphoto_app/spi_colors.dart';
 import 'package:spiphoto_app/service/acces_wordpress.dart';
 import 'package:spiphoto_app/service/image_wp_info.dart';
 
-/// Écran principal qui affiche la liste des albums.
-/// Chaque carte peut afficher les images de l'album.
+/// Écran d'accueil en mosaïque : l'album le plus récent en photo à la une,
+/// puis les autres albums par paires dans une grille de deux colonnes.
 class MyList extends StatefulWidget {
   const MyList({super.key});
 
@@ -13,13 +13,106 @@ class MyList extends StatefulWidget {
 }
 
 class _MyListState extends State<MyList> {
-  late Future<List<Album>> futureAlbums;
+  final List<Album> _albums = [];
+  final Set<int> _idsAlbums = {};
   final Map<int, Future<List<ImageWpInfo>>> _imageCache = {};
+
+  int _total = 0;
+  int _pageSuivante = 1;
+  bool _finAtteinte = false;
+
+  bool _chargementInitial = true;
+  Object? _erreurInitiale;
+  bool _chargementSuite = false;
+  bool _erreurSuite = false;
+
+  // Incrémenté à chaque rechargement complet : une page demandée avant un
+  // rafraîchissement ne doit pas s'ajouter à la liste fraîchement rechargée.
+  int _generation = 0;
+
+  // Distance au bas de la grille (px) en deçà de laquelle on charge la suite.
+  static const double _seuilChargement = 600;
 
   @override
   void initState() {
     super.initState();
-    futureAlbums = fetchAlbums();
+    _chargerPremierePage();
+  }
+
+  /// (Re)charge la première page. Au premier affichage, l'écran montre un
+  /// indicateur plein écran ; lors d'un tirer-pour-rafraîchir, la liste
+  /// actuelle reste visible et n'est remplacée qu'en cas de succès.
+  Future<void> _chargerPremierePage() async {
+    final int generation = ++_generation;
+    try {
+      final PageAlbums page = await fetchAlbums();
+      if (!mounted || generation != _generation) return;
+      setState(() {
+        _albums.clear();
+        _idsAlbums.clear();
+        _pageSuivante = 1;
+        _ajouter(page);
+        _erreurInitiale = null;
+        _erreurSuite = false;
+        _chargementSuite = false;
+      });
+    } catch (e) {
+      if (!mounted || generation != _generation) return;
+      if (_albums.isEmpty) {
+        setState(() => _erreurInitiale = e);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Impossible de rafraîchir les albums')),
+        );
+      }
+    } finally {
+      if (mounted && generation == _generation) {
+        setState(() => _chargementInitial = false);
+      }
+    }
+  }
+
+  Future<void> _chargerSuite() async {
+    if (_chargementSuite || _finAtteinte || _erreurSuite) return;
+    final int generation = _generation;
+    setState(() => _chargementSuite = true);
+    try {
+      final PageAlbums page = await fetchAlbums(page: _pageSuivante);
+      if (!mounted || generation != _generation) return;
+      setState(() => _ajouter(page));
+    } catch (_) {
+      if (!mounted || generation != _generation) return;
+      setState(() => _erreurSuite = true);
+    } finally {
+      if (mounted && generation == _generation) {
+        setState(() => _chargementSuite = false);
+      }
+    }
+  }
+
+  // Ignore les albums déjà présents : si un article est publié entre deux
+  // chargements, les pages se décalent et le dernier album d'une page
+  // réapparaît en tête de la suivante.
+  void _ajouter(PageAlbums page) {
+    for (final Album album in page.albums) {
+      if (_idsAlbums.add(album.id)) _albums.add(album);
+    }
+    _total = page.total;
+    _pageSuivante++;
+    _finAtteinte = page.albums.isEmpty || _pageSuivante > page.totalPages;
+  }
+
+  void _reessayerPremierePage() {
+    setState(() {
+      _chargementInitial = true;
+      _erreurInitiale = null;
+    });
+    _chargerPremierePage();
+  }
+
+  bool _surDefilement(ScrollNotification notification) {
+    if (notification.metrics.extentAfter < _seuilChargement) _chargerSuite();
+    return false;
   }
 
   Future<List<ImageWpInfo>> _getImagesForAlbum(Album album) {
@@ -29,293 +122,454 @@ class _MyListState extends State<MyList> {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return FutureBuilder<List<Album>>(
-      future: futureAlbums,
-      builder: (context, snapshot) {
-        // ── Chargement ──────────────────────────────────────────────────
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        // ── Erreur ──────────────────────────────────────────────────────
-        if (snapshot.hasError) {
-          return Center(
-            child: Padding(
-              padding: const EdgeInsets.all(32.0),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.wifi_off,
-                      color: SpiColors.texteMuted, size: 56),
-                  const SizedBox(height: 20),
-                  Text('Impossible de charger les albums',
-                      style: Theme.of(context).textTheme.titleMedium),
-                  const SizedBox(height: 8),
-                  Text('Vérifiez votre connexion',
-                      style: Theme.of(context).textTheme.bodySmall),
-                  const SizedBox(height: 24),
-                  OutlinedButton.icon(
-                    onPressed: () =>
-                        setState(() => futureAlbums = fetchAlbums()),
-                    icon: const Icon(Icons.refresh, color: SpiColors.mauve),
-                    label: const Text('Réessayer',
-                        style: TextStyle(color: SpiColors.mauve)),
-                    style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: SpiColors.mauve),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        }
-
-        // ── Aucun album ─────────────────────────────────────────────────
-        if (!snapshot.hasData || snapshot.data!.isEmpty) {
-          return Center(
-            child: Text('Aucun album disponible.',
-                style: Theme.of(context).textTheme.bodyMedium),
-          );
-        }
-
-        final List<Album> albums = snapshot.data!;
-
-        // ── Liste magazine ───────────────────────────────────────────────
-        return RefreshIndicator(
-          color: SpiColors.mauve,
-          backgroundColor: SpiColors.surface,
-          onRefresh: () async => setState(() => futureAlbums = fetchAlbums()),
-          child: ListView.builder(
-            padding: const EdgeInsets.symmetric(vertical: 12),
-            itemCount: albums.length,
-            itemBuilder: (context, index) {
-              return FutureBuilder<List<ImageWpInfo>>(
-                future: _getImagesForAlbum(albums[index]),
-                builder: (context, imageSnapshot) {
-                  final String? imageUrl =
-                      (imageSnapshot.hasData && imageSnapshot.data!.isNotEmpty)
-                          ? imageSnapshot.data!.first.thumbnailUrl
-                          : null;
-
-                  final String? fallbackUrl =
-                      (imageSnapshot.hasData && imageSnapshot.data!.isNotEmpty)
-                          ? imageSnapshot.data!.first.fallbackUrl
-                          : null;
-
-                  return _AlbumCardMagazine(
-                    album: albums[index],
-                    imageUrl: imageUrl,
-                    fallbackUrl: fallbackUrl,
-                    isLoading: imageSnapshot.connectionState ==
-                        ConnectionState.waiting,
-                  );
-                },
-              );
-            },
-          ),
-        );
-      },
-    );
+  void _ouvrirAlbum(Album album) {
+    Navigator.pushNamed(context, '/album_details_screen', arguments: album);
   }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// CARTE MAGAZINE — grande image immersive avec titre en overlay
-// ─────────────────────────────────────────────────────────────────────────────
-class _AlbumCardMagazine extends StatelessWidget {
-  final Album album;
-  final String? imageUrl;
-  final String? fallbackUrl;
-  final bool isLoading;
-
-  const _AlbumCardMagazine({
-    required this.album,
-    required this.isLoading,
-    this.imageUrl,
-    this.fallbackUrl,
-  });
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => Navigator.pushNamed(
-        context,
-        '/album_details_screen',
-        arguments: album,
-      ),
-      child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-        height: 220,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(14),
-          color: SpiColors.surface,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.4),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(14),
-          child: Stack(
-            fit: StackFit.expand,
+    // ── Chargement ──────────────────────────────────────────────────────
+    if (_chargementInitial) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    // ── Erreur ──────────────────────────────────────────────────────────
+    if (_erreurInitiale != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              // ── Image de couverture ────────────────────────────────────
-              if (imageUrl != null)
-                Image.network(
-                  imageUrl!,
-                  fit: BoxFit.cover,
-                  loadingBuilder: (context, child, loadingProgress) {
-                    if (loadingProgress == null) return child;
-                    return Container(
-                      color: SpiColors.surface,
-                      child: const Center(child: CircularProgressIndicator()),
-                    );
-                  },
-                  errorBuilder: (_, __, ___) => fallbackUrl != null
-                      ? Image.network(
-                          fallbackUrl!,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => _PlaceholderImage(),
-                        )
-                      : _PlaceholderImage(),
-                )
-              else if (isLoading)
-                Container(
-                  color: SpiColors.surface,
-                  child: const Center(child: CircularProgressIndicator()),
-                )
-              else
-                _PlaceholderImage(),
-
-              // ── Gradient overlay bas ───────────────────────────────────
-              Positioned.fill(
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      stops: const [0.35, 1.0],
-                      colors: [
-                        Colors.transparent,
-                        SpiColors.noir.withValues(alpha: 0.92),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-
-              // ── Filet accent olive en haut ─────────────────────────────
-              Positioned(
-                top: 0,
-                left: 0,
-                right: 0,
-                child: Container(
-                  height: 3,
-                  color: SpiColors.olive,
-                ),
-              ),
-
-              // ── Titre + métadonnées en bas ─────────────────────────────
-              Positioned(
-                bottom: 0,
-                left: 0,
-                right: 0,
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        album.title.toUpperCase(),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: SpiColors.texte,
-                          fontSize: 16.0,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 1.4,
-                          height: 1.2,
-                          shadows: [
-                            Shadow(
-                              color: Colors.black54,
-                              blurRadius: 8,
-                              offset: Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Row(
-                        children: [
-                          // Point accent mauve
-                          Container(
-                            width: 6,
-                            height: 6,
-                            decoration: const BoxDecoration(
-                              color: SpiColors.mauve,
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            'SPIPHOTO',
-                            style: const TextStyle(
-                              color: SpiColors.mauveClair,
-                              fontSize: 10.0,
-                              fontWeight: FontWeight.w600,
-                              letterSpacing: 2.0,
-                            ),
-                          ),
-                          const Spacer(),
-                          // Icône "voir"
-                          const Icon(
-                            Icons.arrow_forward_ios,
-                            color: SpiColors.texteMuted,
-                            size: 12,
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
+              const Icon(Icons.wifi_off, color: SpiColors.texteMuted, size: 56),
+              const SizedBox(height: 20),
+              Text('Impossible de charger les albums',
+                  style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 8),
+              Text('Vérifiez votre connexion',
+                  style: Theme.of(context).textTheme.bodySmall),
+              const SizedBox(height: 24),
+              OutlinedButton.icon(
+                onPressed: _reessayerPremierePage,
+                icon: const Icon(Icons.refresh, color: SpiColors.mauve),
+                label: const Text('Réessayer',
+                    style: TextStyle(color: SpiColors.mauve)),
+                style: OutlinedButton.styleFrom(
+                  side: const BorderSide(color: SpiColors.mauve),
                 ),
               ),
             ],
           ),
         ),
+      );
+    }
+
+    // ── Aucun album ─────────────────────────────────────────────────────
+    if (_albums.isEmpty) {
+      return Center(
+        child: Text('Aucun album disponible.',
+            style: Theme.of(context).textTheme.bodyMedium),
+      );
+    }
+
+    final Album aLaUne = _albums.first;
+    final List<Album> autres = _albums.skip(1).toList();
+    final int nbRangees = (autres.length / 2).ceil();
+
+    // ── Mosaïque ────────────────────────────────────────────────────────
+    return RefreshIndicator(
+      color: SpiColors.mauve,
+      backgroundColor: SpiColors.surface,
+      onRefresh: _chargerPremierePage,
+      child: NotificationListener<ScrollNotification>(
+        onNotification: _surDefilement,
+        child: CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          slivers: [
+            SliverToBoxAdapter(
+              child: _PhotoALaUne(
+                album: aLaUne,
+                images: _getImagesForAlbum(aLaUne),
+                onTap: () => _ouvrirAlbum(aLaUne),
+              ),
+            ),
+            SliverToBoxAdapter(
+              child: _EnteteSection(nbAlbums: _total),
+            ),
+            // Une rangée = une paire d'albums. Des Row plutôt qu'une
+            // SliverGrid : la hauteur des légendes sous les tuiles varie
+            // (titre sur 1 ou 2 lignes, taille de police système).
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+              sliver: SliverList.separated(
+                itemCount: nbRangees,
+                separatorBuilder: (_, __) => const SizedBox(height: 14),
+                itemBuilder: (context, rangee) {
+                  final Album gauche = autres[rangee * 2];
+                  final Album? droite = rangee * 2 + 1 < autres.length
+                      ? autres[rangee * 2 + 1]
+                      : null;
+                  return Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(child: _tuile(gauche)),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: droite != null
+                            ? _tuile(droite)
+                            : const SizedBox.shrink(),
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ),
+
+            // ── Suite : indicateur, ou relance après erreur ────────────
+            if (_chargementSuite)
+              const SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.only(bottom: 24),
+                  child: Center(
+                    child: SizedBox.square(
+                      dimension: 24,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  ),
+                ),
+              )
+            else if (_erreurSuite)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 24),
+                  child: Center(
+                    child: TextButton.icon(
+                      onPressed: () {
+                        setState(() => _erreurSuite = false);
+                        _chargerSuite();
+                      },
+                      icon: const Icon(Icons.refresh, color: SpiColors.mauve),
+                      label: const Text('Charger la suite',
+                          style: TextStyle(color: SpiColors.mauve)),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _tuile(Album album) {
+    return _TuileAlbum(
+      album: album,
+      images: _getImagesForAlbum(album),
+      onTap: () => _ouvrirAlbum(album),
+    );
+  }
+}
+
+String _nbPhotos(int n) => n > 1 ? '$n photos' : '$n photo';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PHOTO À LA UNE — album le plus récent, pleine largeur
+// ─────────────────────────────────────────────────────────────────────────────
+class _PhotoALaUne extends StatelessWidget {
+  final Album album;
+  final Future<List<ImageWpInfo>> images;
+  final VoidCallback onTap;
+
+  const _PhotoALaUne({
+    required this.album,
+    required this.images,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: SizedBox(
+        height: 300,
+        child: FutureBuilder<List<ImageWpInfo>>(
+          future: images,
+          builder: (context, snapshot) {
+            final List<ImageWpInfo> photos = snapshot.data ?? const [];
+            final List<String> meta = [
+              if (album.authorName != null) 'Album de ${album.authorName}',
+              if (snapshot.hasData) _nbPhotos(photos.length),
+            ];
+
+            return Stack(
+              fit: StackFit.expand,
+              children: [
+                // ── Photo ──────────────────────────────────────────────
+                // Image plein format (la vignette 320 px serait floue en
+                // pleine largeur), décodée à la taille d'affichage.
+                if (photos.isNotEmpty)
+                  _PhotoReseau(
+                    url: photos.first.landscapeUrl,
+                    urlSecours: photos.first.thumbnailUrl,
+                    largeurDecodage: (MediaQuery.sizeOf(context).width *
+                            MediaQuery.devicePixelRatioOf(context))
+                        .round(),
+                  )
+                else
+                  const _FondPhoto(),
+
+                // ── Dégradé de lisibilité ──────────────────────────────
+                DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      stops: const [0.0, 0.3, 1.0],
+                      colors: [
+                        SpiColors.noir.withValues(alpha: 0.35),
+                        SpiColors.noir.withValues(alpha: 0.0),
+                        SpiColors.noir.withValues(alpha: 0.95),
+                      ],
+                    ),
+                  ),
+                ),
+
+                // ── Badge, titre, métadonnées ──────────────────────────
+                Positioned(
+                  left: 20,
+                  right: 20,
+                  bottom: 22,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 9, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: SpiColors.olive,
+                          borderRadius: BorderRadius.circular(3),
+                        ),
+                        child: const Text(
+                          'À LA UNE',
+                          style: TextStyle(
+                            color: SpiColors.texte,
+                            fontSize: 9,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 2,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        album.title,
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: SpiColors.texte,
+                          fontSize: 27,
+                          fontWeight: FontWeight.w900,
+                          height: 1.1,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                      if (meta.isNotEmpty) ...[
+                        const SizedBox(height: 7),
+                        Text(
+                          meta.join(' · '),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: SpiColors.texteMuted,
+                            fontSize: 12,
+                            letterSpacing: 0.4,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
       ),
     );
   }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// PLACEHOLDER — quand pas d'image disponible
+// ENTÊTE DE SECTION — « TOUS LES ALBUMS » + compteur, puis filet
 // ─────────────────────────────────────────────────────────────────────────────
-class _PlaceholderImage extends StatelessWidget {
+class _EnteteSection extends StatelessWidget {
+  final int nbAlbums;
+
+  const _EnteteSection({required this.nbAlbums});
+
   @override
   Widget build(BuildContext context) {
-    return Container(
-      color: SpiColors.surfaceAlt,
-      child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: const [
-            Icon(Icons.photo_library_outlined,
-                color: SpiColors.texteMuted, size: 40),
-            SizedBox(height: 8),
-            Text('Album',
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 22, 16, 10),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
+            children: [
+              const Text(
+                'TOUS LES ALBUMS',
                 style: TextStyle(
-                    color: SpiColors.texteDisable,
-                    fontSize: 12,
-                    letterSpacing: 1.5)),
-          ],
+                  color: SpiColors.texte,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 2.4,
+                ),
+              ),
+              Text(
+                '$nbAlbums',
+                style: const TextStyle(
+                  color: SpiColors.mauveClair,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.6,
+                ),
+              ),
+            ],
+          ),
         ),
+        Container(
+          height: 1,
+          margin: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+          color: SpiColors.olive.withValues(alpha: 0.35),
+        ),
+      ],
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TUILE D'ALBUM — vignette carrée bordée olive, titre et nombre de photos
+// ─────────────────────────────────────────────────────────────────────────────
+class _TuileAlbum extends StatelessWidget {
+  final Album album;
+  final Future<List<ImageWpInfo>> images;
+  final VoidCallback onTap;
+
+  const _TuileAlbum({
+    required this.album,
+    required this.images,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: FutureBuilder<List<ImageWpInfo>>(
+        future: images,
+        builder: (context, snapshot) {
+          final List<ImageWpInfo> photos = snapshot.data ?? const [];
+
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              AspectRatio(
+                aspectRatio: 1,
+                child: Container(
+                  decoration: BoxDecoration(
+                    border: Border.all(
+                      color: SpiColors.olive.withValues(alpha: 0.5),
+                      width: 1.5,
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(10.5),
+                    child: photos.isNotEmpty
+                        ? _PhotoReseau(
+                            url: photos.first.thumbnailUrl,
+                            urlSecours: photos.first.fallbackUrl,
+                          )
+                        : const _FondPhoto(),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                album.title,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: SpiColors.texte,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.9,
+                ),
+              ),
+              if (snapshot.hasData)
+                Text(
+                  _nbPhotos(photos.length),
+                  style: const TextStyle(
+                    color: SpiColors.texteMuted,
+                    fontSize: 11,
+                  ),
+                ),
+            ],
+          );
+        },
       ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PHOTO RÉSEAU — fond neutre pendant le chargement, URL de secours en erreur
+// ─────────────────────────────────────────────────────────────────────────────
+class _PhotoReseau extends StatelessWidget {
+  final String url;
+  final String urlSecours;
+  final int? largeurDecodage;
+
+  const _PhotoReseau({
+    required this.url,
+    required this.urlSecours,
+    this.largeurDecodage,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Image.network(
+      url,
+      fit: BoxFit.cover,
+      cacheWidth: largeurDecodage,
+      loadingBuilder: (context, child, loadingProgress) =>
+          loadingProgress == null ? child : const _FondPhoto(),
+      errorBuilder: (_, __, ___) => Image.network(
+        urlSecours,
+        fit: BoxFit.cover,
+        cacheWidth: largeurDecodage,
+        errorBuilder: (_, __, ___) => const _FondPhoto(enErreur: true),
+      ),
+    );
+  }
+}
+
+class _FondPhoto extends StatelessWidget {
+  final bool enErreur;
+
+  const _FondPhoto({this.enErreur = false});
+
+  @override
+  Widget build(BuildContext context) {
+    return ColoredBox(
+      color: SpiColors.surfaceAlt,
+      child: enErreur
+          ? const Center(
+              child: Icon(Icons.broken_image_outlined,
+                  color: SpiColors.texteMuted, size: 32),
+            )
+          : const SizedBox.expand(),
     );
   }
 }
