@@ -16,9 +16,10 @@ import 'package:spiphoto_app/service/image_wp_info.dart';
 ///       albumTitle, lastAddedAt, membres.{uid}: {nom, photo, ajout}).
 /// mediaId est l'identifiant du média WordPress (voir ImageWpInfo.mediaId).
 ///
-/// L'ajout et le retrait touchent les deux collections dans une seule
-/// transaction Firestore pour garantir qu'un événement favori et le
-/// compteur associé restent toujours cohérents entre eux.
+/// L'ajout et le retrait touchent les deux collections dans un seul lot
+/// d'écritures (WriteBatch), sans lecture préalable : l'événement favori et
+/// la fiche restent cohérents, et l'écriture part même hors ligne (elle est
+/// envoyée au retour du réseau).
 class FavoritesService {
   // ── Singleton, même logique que pour AuthService ──────────────────────
   FavoritesService._internal() {
@@ -135,9 +136,10 @@ class FavoritesService {
   /// Ajoute une photo aux favoris.
   /// - Ne fait rien si personne n'est connecté (sécurité silencieuse).
   /// - Idempotent : si l'événement existe déjà (double appel, tap répété),
-  ///   on ne réincrémente pas le compteur une seconde fois.
-  /// - favoriteEvents et photoStats sont écrits dans la même transaction :
-  ///   soit les deux réussissent, soit aucun n'est modifié.
+  ///   le recréer serait une modification, que les règles refusent ; tout le
+  ///   lot est alors rejeté et le compteur n'est pas réincrémenté.
+  /// - favoriteEvents et photoStats sont écrits dans le même lot : soit les
+  ///   deux réussissent, soit aucun n'est modifié.
   /// - Le nom, l'avatar du membre et l'album (si connu) sont copiés dans
   ///   l'événement et dans la fiche photoStats pour le fil du Club : aucun
   ///   profil membre n'existe ailleurs dans Firestore. Un changement de nom
@@ -151,11 +153,8 @@ class FavoritesService {
     final eventRef = _eventsCollection.doc('${uid}_$mediaId');
     final statsRef = _statsCollection.doc(mediaId);
 
-    await _db.runTransaction((transaction) async {
-      final eventSnapshot = await transaction.get(eventRef);
-      if (eventSnapshot.exists) return; // déjà favori — idempotent
-
-      transaction.set(eventRef, {
+    final WriteBatch lot = _db.batch()
+      ..set(eventRef, {
         'userId': uid,
         'mediaId': mediaId,
         'photoUrl': photo.landscapeUrl,
@@ -165,8 +164,8 @@ class FavoritesService {
         if (user?.displayName != null) 'userName': user!.displayName,
         if (user?.photoURL != null) 'userPhoto': user!.photoURL,
         if (albumTitle != null) 'albumTitle': albumTitle,
-      });
-      transaction.set(
+      })
+      ..set(
         statsRef,
         {
           'favoriteCount': FieldValue.increment(1),
@@ -185,19 +184,17 @@ class FavoritesService {
         },
         SetOptions(merge: true),
       );
-    });
+    await _valider(lot);
   }
 
   /// Retire une photo des favoris.
-  /// - Idempotent : si aucun événement n'existe pour cette photo, rien à
-  ///   faire (pas d'erreur si la photo n'était pas favorite).
-  /// - Le compteur est lu dans la transaction puis décrémenté manuellement
-  ///   (jamais en dessous de 0) plutôt que via FieldValue.increment(-1), pour
-  ///   pouvoir appliquer ce plancher.
-  /// - Le membre sort de la fiche photoStats. Sans plus aucun favori, la
-  ///   photo perd aussi sa date de dernier ajout et sort du tri « dernières ».
-  ///   Sinon cette date reste celle du dernier ajout, même s'il vient d'être
-  ///   retiré.
+  /// - Idempotent : si aucun événement n'existe pour cette photo, supprimer
+  ///   l'événement est refusé par les règles et tout le lot est rejeté.
+  /// - Le compteur est décrémenté sans être lu ; les règles l'empêchent de
+  ///   passer sous 0.
+  /// - Le membre sort de la fiche photoStats. La date du dernier ajout ne
+  ///   change pas : une photo revenue à 0 favori est écartée du fil par son
+  ///   compteur.
   Future<void> removeFavorite(ImageWpInfo photo) async {
     final uid = _uid;
     if (uid == null) return;
@@ -206,26 +203,28 @@ class FavoritesService {
     final eventRef = _eventsCollection.doc('${uid}_$mediaId');
     final statsRef = _statsCollection.doc(mediaId);
 
-    await _db.runTransaction((transaction) async {
-      final eventSnapshot = await transaction.get(eventRef);
-      if (!eventSnapshot.exists) return; // pas favori — idempotent
-
-      final statsSnapshot = await transaction.get(statsRef);
-      final int currentCount =
-          (statsSnapshot.data()?['favoriteCount'] as num?)?.toInt() ?? 0;
-      final int newCount = currentCount > 0 ? currentCount - 1 : 0;
-
-      transaction.delete(eventRef);
-      transaction.set(
+    final WriteBatch lot = _db.batch()
+      ..delete(eventRef)
+      ..set(
         statsRef,
         {
-          'favoriteCount': newCount,
-          if (newCount == 0) 'lastAddedAt': FieldValue.delete(),
+          'favoriteCount': FieldValue.increment(-1),
           'membres': {uid: FieldValue.delete()},
         },
         SetOptions(merge: true),
       );
-    });
+    await _valider(lot);
+  }
+
+  // Un lot refusé par les règles est le cas « déjà favori » (ou « pas
+  // favori ») : rien n'a été écrit, comme le veut l'idempotence. Les autres
+  // erreurs remontent à l'appelant.
+  static Future<void> _valider(WriteBatch lot) async {
+    try {
+      await lot.commit();
+    } on FirebaseException catch (e) {
+      if (e.code != 'permission-denied') rethrow;
+    }
   }
 
   /// Bascule l'état favori d'une photo : l'ajoute si elle est absente,
@@ -243,10 +242,11 @@ class FavoritesService {
   /// - [TriClub.plusChoisies] : par nombre de favoris décroissant (tri sur
   ///   favoriteCount) ;
   /// - [TriClub.dernieres] : la photo mise en favori le plus récemment en
-  ///   tête (tri sur lastAddedAt).
+  ///   tête (tri sur lastAddedAt). Les photos revenues à 0 favori gardent
+  ///   leur date : on en lit deux fois plus, puis on les écarte.
   /// Une seule requête sur photoStats, dont les fiches portent tout le
-  /// nécessaire à l'affichage : [limite] lectures. Les deux tris ne reposent
-  /// que sur des index simples, créés automatiquement.
+  /// nécessaire à l'affichage. Les deux tris ne reposent que sur des index
+  /// simples, créés automatiquement.
   Future<List<FavoriClub>> getFavorisDuClub({
     TriClub tri = TriClub.plusChoisies,
     int limite = 20,
@@ -258,7 +258,9 @@ class FavoritesService {
             .where('favoriteCount', isGreaterThan: 0)
             .orderBy('favoriteCount', descending: true)
         : _statsCollection.orderBy('lastAddedAt', descending: true);
-    final stats = await requete.limit(limite).get();
+    final stats = await requete
+        .limit(tri == TriClub.plusChoisies ? limite : limite * 2)
+        .get();
 
     // Les fiches écrites par les versions précédentes de l'app n'ont que le
     // compteur : leur entrée est alors reconstruite à partir des événements.
@@ -268,6 +270,7 @@ class FavoritesService {
                 : _favoriClub(doc.id))))
         .whereType<FavoriClub>()
         .where((f) => f.nbFavoris > 0)
+        .take(limite)
         .toList();
 
     // On retrie sur les valeurs affichées : une entrée reconstruite peut
