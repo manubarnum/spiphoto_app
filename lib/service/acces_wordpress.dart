@@ -68,11 +68,16 @@ class PageAlbums {
 /// `_fields` ne garde que les champs lus par [Album.fromJson] (environ 20 %
 /// de moins) ; `_links.author` reste nécessaire, sans lui `_embed` ne
 /// renvoie plus l'auteur.
+/// Le serveur (o2switch) ne compresse pas application/json : `_spi_gz`
+/// demande au mu-plugin du site de servir la réponse sous un type que le
+/// serveur compresse en gzip (environ 95 % de moins). Le corps reste du
+/// JSON, décompressé automatiquement par le client HTTP.
 Future<PageAlbums> fetchAlbums({int page = 1}) async {
   final response = await http.get(
     Uri.parse('https://www.spiphoto.fr/wp-json/wp/v2/posts'
         '?_embed=author'
         '&_fields=id,title.rendered,content.rendered,_links.author,_embedded'
+        '&_spi_gz=1'
         '&page=$page'),
   );
 
