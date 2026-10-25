@@ -29,6 +29,7 @@ class SpiColors {
   /// Textes
   static const Color texte = Color(0xFFF2EFE8); // blanc crème — principal
   static const Color texteMuted = Color(0xFF9E9A8E); // gris chaud — secondaire
+  static const Color texteTertiaire = Color(0xFF7C7870); // métadonnées
   static const Color texteDisable = Color(0xFF5A5750); // désactivé
 
   /// Utilitaires

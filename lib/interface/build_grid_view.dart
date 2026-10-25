@@ -28,20 +28,37 @@ Widget buildGridView(BuildContext context, List<ImageWpInfo> imageInfos) {
 /// Variante sliver de [buildGridView], à placer dans un CustomScrollView.
 /// Les vignettes sont construites à la demande : sur un album d'une
 /// centaine de photos, seules celles proches de l'écran sont chargées.
-Widget buildSliverGridView(BuildContext context, List<ImageWpInfo> imageInfos) {
+/// [legende] et [auteur] sont transmis à la visionneuse.
+Widget buildSliverGridView(
+  BuildContext context,
+  List<ImageWpInfo> imageInfos, {
+  String? legende,
+  String? auteur,
+}) {
   return SliverGrid.builder(
     gridDelegate: _gridDelegate(context),
     itemCount: imageInfos.length,
-    itemBuilder: (context, index) =>
-        _VignettePhoto(imageInfos: imageInfos, index: index),
+    itemBuilder: (context, index) => _VignettePhoto(
+      imageInfos: imageInfos,
+      index: index,
+      legende: legende,
+      auteur: auteur,
+    ),
   );
 }
 
 class _VignettePhoto extends StatelessWidget {
   final List<ImageWpInfo> imageInfos;
   final int index;
+  final String? legende;
+  final String? auteur;
 
-  const _VignettePhoto({required this.imageInfos, required this.index});
+  const _VignettePhoto({
+    required this.imageInfos,
+    required this.index,
+    this.legende,
+    this.auteur,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -50,7 +67,13 @@ class _VignettePhoto extends StatelessWidget {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => buildPageView(context, imageInfos, index),
+            builder: (context) => buildPageView(
+              context,
+              imageInfos,
+              index,
+              legende: legende,
+              auteur: auteur,
+            ),
           ),
         );
       },

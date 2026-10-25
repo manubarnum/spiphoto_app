@@ -182,7 +182,12 @@ class _AlbumDetailsScreenState extends State<AlbumDetailsScreen> {
               // Grille
               SliverPadding(
                 padding: const EdgeInsets.fromLTRB(15, 0, 15, 24),
-                sliver: buildSliverGridView(context, imageInfos),
+                sliver: buildSliverGridView(
+                  context,
+                  imageInfos,
+                  legende: widget.album.title,
+                  auteur: widget.album.authorName,
+                ),
               ),
             ],
           );
