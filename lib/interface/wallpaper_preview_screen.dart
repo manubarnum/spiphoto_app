@@ -5,22 +5,7 @@ import 'package:extended_image/extended_image.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'package:spiphoto_app/spi_colors.dart';
-
-class WallpaperScreen {
-  static const platform = MethodChannel('fr.enkirche/wallpaper');
-
-  /// Pose le fond d'écran via le MethodChannel natif.
-  /// [crop] : zone à conserver, en fractions de l'image (0..1) ; l'image
-  /// entière si null. Lève une [PlatformException] en cas d'échec.
-  Future<void> setWallpaper(String imageUrl, int wallpaperType,
-      {Rect? crop}) async {
-    await platform.invokeMethod('setWallpaper', {
-      'imageUrl': imageUrl,
-      'wallpaperType': wallpaperType,
-      if (crop != null) 'crop': [crop.left, crop.top, crop.right, crop.bottom],
-    });
-  }
-}
+import 'package:spiphoto_app/service/wallpaper_service.dart';
 
 /// Écran(s) sur le(s)quel(s) poser le fond d'écran. [code] est la valeur
 /// attendue par le canal natif (voir MainActivity.kt).
@@ -49,7 +34,7 @@ class WallpaperPreviewScreen extends StatefulWidget {
 }
 
 class _WallpaperPreviewScreenState extends State<WallpaperPreviewScreen> {
-  final WallpaperScreen _service = WallpaperScreen();
+  final WallpaperService _service = WallpaperService();
 
   // Même fournisseur que la visionneuse : l'image est déjà en cache.
   late final ImageProvider _image =

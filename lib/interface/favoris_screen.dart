@@ -39,25 +39,15 @@ class _LoggedOutViewState extends State<_LoggedOutView> {
   bool _isLoading = false;
 
   Future<void> _handleSignIn() async {
+    final ScaffoldMessengerState messager = ScaffoldMessenger.of(context);
     setState(() => _isLoading = true);
-    try {
-      await AuthService.instance.signInWithGoogle();
-      // Si ça réussit, le StreamBuilder parent bascule automatiquement
-      // vers _LoggedInView — rien d'autre à faire ici.
-    } on AuthDomainException catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.message)),
-      );
-    } catch (e) {
-      debugPrint('DEBUG AUTH ERROR: $e');
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Échec de la connexion. Réessaie.')),
-      );
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
+    // Si ça réussit, le StreamBuilder parent bascule automatiquement
+    // vers _LoggedInView — rien d'autre à faire ici.
+    final String? erreur = await AuthService.instance.connecterAvecGoogle();
+    if (erreur != null) {
+      messager.showSnackBar(SnackBar(content: Text(erreur)));
     }
+    if (mounted) setState(() => _isLoading = false);
   }
 
   @override

@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:spiphoto_app/spi_colors.dart';
 import 'package:spiphoto_app/service/image_wp_info.dart';
 import 'package:extended_image/extended_image.dart';
-import 'package:spiphoto_app/service/wallpaper_screen.dart';
+import 'package:spiphoto_app/interface/wallpaper_preview_screen.dart';
 import 'package:spiphoto_app/service/share_service.dart';
 import 'package:spiphoto_app/service/auth_service.dart';
 import 'package:spiphoto_app/service/favorites_service.dart';
@@ -96,6 +96,17 @@ class _PageViewScreenState extends State<PageViewScreen> {
     final String url = _photo.landscapeUrl;
     await FavoritesService.instance
         .toggleFavorite(url, _favoriteUrls.contains(url));
+  }
+
+  Future<void> _partager() async {
+    final ScaffoldMessengerState messager = ScaffoldMessenger.of(context);
+    try {
+      await _shareService.shareImage(_photo.landscapeUrl, _photo.description);
+    } catch (e) {
+      messager.showSnackBar(
+        SnackBar(content: Text('Erreur lors du partage de l\'image : $e')),
+      );
+    }
   }
 
   @override
@@ -252,8 +263,7 @@ class _PageViewScreenState extends State<PageViewScreen> {
                             ),
                           ),
                           onFavori: _toggleFavorite,
-                          onPartager: () => _shareService.shareImageOnInstagram(
-                              context, _photo.landscapeUrl, _photo.description),
+                          onPartager: _partager,
                         ),
                         if (widget.imageInfos.length > 1) ...[
                           const SizedBox(height: 16),

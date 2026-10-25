@@ -1,4 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 /// Exception levée quand un utilisateur se connecte avec un compte Google
@@ -105,6 +106,20 @@ class AuthService {
     );
     final userCredential = await _firebaseAuth.signInWithCredential(credential);
     return userCredential.user;
+  }
+
+  /// Connexion Google pour les écrans : renvoie null en cas de succès, ou le
+  /// message d'erreur à afficher. L'affichage reste à la charge de la vue.
+  Future<String?> connecterAvecGoogle() async {
+    try {
+      await signInWithGoogle();
+      return null;
+    } on AuthDomainException catch (e) {
+      return e.message;
+    } catch (e) {
+      debugPrint('DEBUG AUTH ERROR: $e');
+      return 'Échec de la connexion. Réessaie.';
+    }
   }
 
   Future<void> signOut() async {
