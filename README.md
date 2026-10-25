@@ -32,8 +32,6 @@ Application mobile du club photo **SPIPHOTO**, développée avec Flutter. Elle p
 | `shared_preferences` | Mémorisation du mode jour / nuit |
 | `url_launcher` | Ouverture du site du club |
 
-> ℹ️ `easy_image_viewer` est encore déclaré dans `pubspec.yaml` mais n'est plus utilisé par le code.
-
 ---
 
 ## 📁 Structure du projet
@@ -71,10 +69,8 @@ test/
 └── theme_service_test.dart            # Tests du mode jour / nuit
 
 assets/
-├── icons/
-│   └── mon_logo1.png                  # Logo de l'application
-└── ca/
-    └── lets-encrypt-r3.pem            # Certificat Let's Encrypt (déclaré, non utilisé par le code)
+└── icons/
+    └── mon_logo1.png                  # Logo de l'application
 ```
 
 ---

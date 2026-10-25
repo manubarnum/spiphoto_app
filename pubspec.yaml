@@ -13,7 +13,6 @@ dependencies:
   http: ^1.4.0
   html: ^0.15.4
   url_launcher: ^6.3.2
-  easy_image_viewer: ^1.4.1
   extended_image: ^10.0.1
   share_plus: ^13.3.0
   firebase_core: ^4.14.0
@@ -46,4 +45,3 @@ flutter:
     - android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
     - android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
     - assets/icons/mon_logo1.png
-    - assets/ca/lets-encrypt-r3.pem
