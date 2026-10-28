@@ -74,6 +74,7 @@ class _PageViewScreenState extends State<PageViewScreen> {
 
   Set<String> _idsFavoris() => (_favorisPartages.value ?? const <ImageWpInfo>[])
       .map((p) => p.mediaId)
+      .whereType<String>()
       .toSet();
 
   void _majFavoris() => setState(() => _favoris = _idsFavoris());
@@ -279,7 +280,10 @@ class _PageViewScreenState extends State<PageViewScreen> {
                                       imageUrl: _photo.landscapeUrl),
                                 ),
                               ),
-                              onFavori: _toggleFavorite,
+                              // Sans identifiant WordPress, pas de favori.
+                              onFavori: _photo.mediaId == null
+                                  ? null
+                                  : _toggleFavorite,
                               onPartager: _partager,
                             ),
                             if (widget.imageInfos.length > 1) ...[
@@ -362,7 +366,9 @@ class _PhotoPleinCadre extends StatelessWidget {
 class _BarreActions extends StatelessWidget {
   final bool isFav;
   final VoidCallback onFondEcran;
-  final VoidCallback onFavori;
+
+  /// null : pas de bouton favori (photo sans identifiant WordPress).
+  final VoidCallback? onFavori;
   final VoidCallback onPartager;
 
   const _BarreActions({
@@ -410,18 +416,20 @@ class _BarreActions extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: _BoutonAction(
-              tooltip: isFav ? 'Retirer des favoris' : 'Ajouter aux favoris',
-              onTap: onFavori,
-              child: Icon(
-                isFav ? Icons.favorite : Icons.favorite_border,
-                color: SpiColors.mauveClair,
-                size: 23,
+          if (onFavori != null) ...[
+            const SizedBox(width: 8),
+            Expanded(
+              child: _BoutonAction(
+                tooltip: isFav ? 'Retirer des favoris' : 'Ajouter aux favoris',
+                onTap: onFavori!,
+                child: Icon(
+                  isFav ? Icons.favorite : Icons.favorite_border,
+                  color: SpiColors.mauveClair,
+                  size: 23,
+                ),
               ),
             ),
-          ),
+          ],
           const SizedBox(width: 8),
           Expanded(
             child: _BoutonAction(

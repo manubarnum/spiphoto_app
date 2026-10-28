@@ -64,8 +64,10 @@ class _FilDuClubState extends State<_FilDuClub> {
     _favoris.addListener(_majFavoris);
   }
 
-  Set<String> _idsFavoris() =>
-      (_favoris.value ?? const <ImageWpInfo>[]).map((p) => p.mediaId).toSet();
+  Set<String> _idsFavoris() => (_favoris.value ?? const <ImageWpInfo>[])
+      .map((p) => p.mediaId)
+      .whereType<String>()
+      .toSet();
 
   void _majFavoris() => setState(() => _mesFavoris = _idsFavoris());
 
@@ -93,10 +95,11 @@ class _FilDuClubState extends State<_FilDuClub> {
   }
 
   List<ImageWpInfo> _photos(List<FavoriClub> fil) => fil
-      .map((f) => ImageWpInfo.fromFavoriteUrl(f.photoUrl,
+      .map((f) => ImageWpInfo.favori(
           mediaId: f.mediaId,
-          thumbnailUrl: f.vignetteUrl,
-          ecranUrl: f.ecranUrl,
+          photoPath: f.photoPath,
+          vignettePath: f.vignettePath,
+          ecranPath: f.ecranPath,
           album: f.albumTitle))
       .toList();
 
@@ -119,13 +122,16 @@ class _FilDuClubState extends State<_FilDuClub> {
   }
 
   Future<void> _basculerFavori(ImageWpInfo photo) async {
-    final bool ajout = !_mesFavoris.contains(photo.mediaId);
+    // Les photos du fil viennent de photoStats : elles ont un identifiant.
+    final String? mediaId = photo.mediaId;
+    if (mediaId == null) return;
+    final bool ajout = !_mesFavoris.contains(mediaId);
     await FavoritesService.instance.toggleFavorite(
       photo,
       !ajout,
       albumTitle: photo.album,
     );
-    if (mounted) _ajuster(photo.mediaId, ajout: ajout);
+    if (mounted) _ajuster(mediaId, ajout: ajout);
   }
 
   /// Reporte sur le fil affiché un favori ajouté ou retiré par l'utilisateur,
@@ -142,9 +148,9 @@ class _FilDuClubState extends State<_FilDuClub> {
               else if (ajout || f.nbFavoris > 1)
                 FavoriClub(
                   mediaId: f.mediaId,
-                  photoUrl: f.photoUrl,
-                  vignetteUrl: f.vignetteUrl,
-                  ecranUrl: f.ecranUrl,
+                  photoPath: f.photoPath,
+                  vignettePath: f.vignettePath,
+                  ecranPath: f.ecranPath,
                   nbFavoris: f.nbFavoris + (ajout ? 1 : -1),
                   membres: _membresApres(f.membres, moi, ajout),
                   albumTitle: f.albumTitle,

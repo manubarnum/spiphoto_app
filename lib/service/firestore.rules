@@ -27,7 +27,7 @@ service cloud.firestore {
       // entrée membres.{uid}.
       function champsConnus() {
         return request.resource.data.keys().hasOnly(['favoriteCount',
-          'lastAddedAt', 'photoUrl', 'vignetteUrl', 'ecranUrl', 'albumTitle',
+          'lastAddedAt', 'photoPath', 'vignettePath', 'ecranPath', 'albumTitle',
           'membres']);
       }
 

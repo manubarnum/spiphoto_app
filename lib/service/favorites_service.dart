@@ -9,12 +9,16 @@ import 'package:spiphoto_app/service/image_wp_info.dart';
 ///
 /// Modèle de données (voir firestore.rules) :
 ///   favoriteEvents/{uid}_{mediaId}   — un document par favori individuel
-///       { userId, mediaId, photoUrl, vignetteUrl, ecranUrl, createdAt }
+///       { userId, mediaId, photoPath, vignettePath, ecranPath, createdAt }
 ///   photoStats/{mediaId} — une fiche par photo, partagée entre tous les
 ///       utilisateurs : compteur favoriteCount, et de quoi afficher le fil
-///       du Club sans relire les événements (photoUrl, vignetteUrl, ecranUrl,
-///       albumTitle, lastAddedAt, membres.{uid}: {nom, photo, ajout}).
-/// mediaId est l'identifiant du média WordPress (voir ImageWpInfo.mediaId).
+///       du Club sans relire les événements (photoPath, vignettePath,
+///       ecranPath, albumTitle, lastAddedAt, membres.{uid}: {nom, photo,
+///       ajout}).
+/// mediaId est l'identifiant du média WordPress (« 64519 », voir
+/// ImageWpInfo.mediaId), identique sur le site local et en production. Les
+/// *Path sont relatifs au dossier des médias (voir cheminMedia) : chaque
+/// client, app ou site, y ajoute son propre domaine.
 ///
 /// L'ajout et le retrait touchent les deux collections dans un seul lot
 /// d'écritures (WriteBatch), sans lecture préalable : l'événement favori et
@@ -86,8 +90,12 @@ class FavoritesService {
         .where('userId', isEqualTo: uid)
         .snapshots()
         .map((snapshot) {
+      // Un favori sans identifiant ni chemin relatif (ancien format) est
+      // ignoré.
       final docs = snapshot.docs
-          .where((doc) => doc.data()['photoUrl'] is String)
+          .where((doc) =>
+              doc.data()['mediaId'] is String &&
+              doc.data()['photoPath'] is String)
           .toList();
       docs.sort((a, b) {
         final Timestamp? dateA = a.data()['createdAt'] as Timestamp?;
@@ -100,19 +108,30 @@ class FavoritesService {
     });
   }
 
-  // Les favoris enregistrés par les versions précédentes de l'app n'ont que
-  // photoUrl : fromFavoriteUrl reconstruit alors la vignette.
   static ImageWpInfo _photoFavorite(Map<String, dynamic> data) =>
-      ImageWpInfo.fromFavoriteUrl(
-        data['photoUrl'] as String,
-        mediaId: data['mediaId'] as String?,
-        thumbnailUrl: data['vignetteUrl'] as String?,
-        ecranUrl: data['ecranUrl'] as String?,
+      ImageWpInfo.favori(
+        mediaId: data['mediaId'] as String,
+        photoPath: data['photoPath'] as String,
+        vignettePath: data['vignettePath'] as String?,
+        ecranPath: data['ecranPath'] as String?,
         album: data['albumTitle'] as String?,
       );
 
+  // Chemins relatifs d'une photo, communs à l'événement et à la fiche ;
+  // null si son original n'est pas un média WordPress.
+  static Map<String, String>? _chemins(ImageWpInfo photo) {
+    final String? photoPath = cheminMedia(photo.landscapeUrl);
+    if (photoPath == null) return null;
+    return {
+      'photoPath': photoPath,
+      'vignettePath': cheminMedia(photo.thumbnailUrl) ?? photoPath,
+      'ecranPath': cheminMedia(photo.ecranUrl) ?? photoPath,
+    };
+  }
+
   /// Ajoute une photo aux favoris.
-  /// - Ne fait rien si personne n'est connecté (sécurité silencieuse).
+  /// - Ne fait rien si personne n'est connecté (sécurité silencieuse), ni
+  ///   pour une photo sans identifiant WordPress (pas de repli sur l'URL).
   /// - Idempotent : si l'événement existe déjà (double appel, tap répété),
   ///   le recréer serait une modification, que les règles refusent ; tout le
   ///   lot est alors rejeté et le compteur n'est pas réincrémenté.
@@ -125,9 +144,10 @@ class FavoritesService {
   Future<void> addFavorite(ImageWpInfo photo, {String? albumTitle}) async {
     final User? user = FirebaseAuth.instance.currentUser;
     final uid = user?.uid;
-    if (uid == null) return;
+    final String? mediaId = photo.mediaId;
+    final Map<String, String>? chemins = _chemins(photo);
+    if (uid == null || mediaId == null || chemins == null) return;
 
-    final String mediaId = photo.mediaId;
     final eventRef = _eventsCollection.doc('${uid}_$mediaId');
     final statsRef = _statsCollection.doc(mediaId);
 
@@ -135,9 +155,7 @@ class FavoritesService {
       ..set(eventRef, {
         'userId': uid,
         'mediaId': mediaId,
-        'photoUrl': photo.landscapeUrl,
-        'vignetteUrl': photo.thumbnailUrl,
-        'ecranUrl': photo.ecranUrl,
+        ...chemins,
         'createdAt': FieldValue.serverTimestamp(),
         if (user?.displayName != null) 'userName': user!.displayName,
         if (user?.photoURL != null) 'userPhoto': user!.photoURL,
@@ -148,9 +166,7 @@ class FavoritesService {
         {
           'favoriteCount': FieldValue.increment(1),
           'lastAddedAt': FieldValue.serverTimestamp(),
-          'photoUrl': photo.landscapeUrl,
-          'vignetteUrl': photo.thumbnailUrl,
-          'ecranUrl': photo.ecranUrl,
+          ...chemins,
           if (albumTitle != null) 'albumTitle': albumTitle,
           'membres': {
             uid: {
@@ -175,9 +191,9 @@ class FavoritesService {
   ///   compteur.
   Future<void> removeFavorite(ImageWpInfo photo) async {
     final uid = _uid;
-    if (uid == null) return;
+    final String? mediaId = photo.mediaId;
+    if (uid == null || mediaId == null) return;
 
-    final String mediaId = photo.mediaId;
     final eventRef = _eventsCollection.doc('${uid}_$mediaId');
     final statsRef = _statsCollection.doc(mediaId);
 
@@ -240,19 +256,15 @@ class FavoritesService {
         .limit(tri == TriClub.plusChoisies ? limite : limite * 2)
         .get();
 
-    // Les fiches écrites par les versions précédentes de l'app n'ont que le
-    // compteur : leur entrée est alors reconstruite à partir des événements.
-    final List<FavoriClub> fil = (await Future.wait(stats.docs.map((doc) =>
-            doc.data()['photoUrl'] is String
-                ? Future.value(favoriClubDepuisFiche(doc.id, doc.data()))
-                : _favoriClub(doc.id))))
-        .whereType<FavoriClub>()
+    // Une fiche sans chemin relatif (ancien format) est ignorée.
+    final List<FavoriClub> fil = stats.docs
+        .where((doc) => doc.data()['photoPath'] is String)
+        .map((doc) => favoriClubDepuisFiche(doc.id, doc.data()))
         .where((f) => f.nbFavoris > 0)
         .take(limite)
         .toList();
 
-    // On retrie sur les valeurs affichées : une entrée reconstruite peut
-    // différer de la fiche.
+    // Les fiches écartées peuvent avoir décalé l'ordre de la requête.
     if (tri == TriClub.plusChoisies) {
       fil.sort((a, b) => b.nbFavoris.compareTo(a.nbFavoris));
     } else {
@@ -278,9 +290,9 @@ class FavoritesService {
 
     return FavoriClub(
       mediaId: mediaId,
-      photoUrl: data['photoUrl'] as String,
-      vignetteUrl: data['vignetteUrl'] as String?,
-      ecranUrl: data['ecranUrl'] as String?,
+      photoPath: data['photoPath'] as String,
+      vignettePath: data['vignettePath'] as String?,
+      ecranPath: data['ecranPath'] as String?,
       nbFavoris: (data['favoriteCount'] as num?)?.toInt() ?? 0,
       dernierAjout: (data['lastAddedAt'] as Timestamp?)?.toDate(),
       membres: entrees
@@ -291,47 +303,6 @@ class FavoritesService {
               ))
           .toList(),
       albumTitle: data['albumTitle'] as String?,
-    );
-  }
-
-  /// Une entrée du fil à partir des événements favoris d'une photo (fiches
-  /// photoStats des versions précédentes de l'app).
-  Future<FavoriClub?> _favoriClub(String mediaId) async {
-    final events =
-        await _eventsCollection.where('mediaId', isEqualTo: mediaId).get();
-    if (events.docs.isEmpty) return null;
-
-    // Premiers membres à l'avoir choisie en tête de la liste.
-    final docs = events.docs.toList()
-      ..sort((a, b) => _comparerDates(
-          (a.data()['createdAt'] as Timestamp?)?.toDate(),
-          (b.data()['createdAt'] as Timestamp?)?.toDate()));
-    final String? photoUrl =
-        docs.map((d) => d.data()['photoUrl']).whereType<String>().firstOrNull;
-    if (photoUrl == null) return null;
-
-    return FavoriClub(
-      mediaId: mediaId,
-      photoUrl: photoUrl,
-      vignetteUrl: docs
-          .map((d) => d.data()['vignetteUrl'])
-          .whereType<String>()
-          .firstOrNull,
-      ecranUrl:
-          docs.map((d) => d.data()['ecranUrl']).whereType<String>().firstOrNull,
-      nbFavoris: docs.length,
-      dernierAjout: (docs.last.data()['createdAt'] as Timestamp?)?.toDate(),
-      membres: docs
-          .where((d) => d.data()['userName'] is String)
-          .map((d) => MembreFavori(
-                nom: d.data()['userName'] as String,
-                photoUrl: d.data()['userPhoto'] as String?,
-              ))
-          .toList(),
-      albumTitle: docs
-          .map((d) => d.data()['albumTitle'])
-          .whereType<String>()
-          .firstOrNull,
     );
   }
 
@@ -350,12 +321,11 @@ enum TriClub { plusChoisies, dernieres }
 /// Une photo du fil du Club.
 class FavoriClub {
   final String mediaId;
-  final String photoUrl;
 
-  /// Vignette et taille écran, absentes des favoris enregistrés par les
-  /// versions précédentes de l'app.
-  final String? vignetteUrl;
-  final String? ecranUrl;
+  /// Chemins relatifs au dossier des médias (voir cheminMedia).
+  final String photoPath;
+  final String? vignettePath;
+  final String? ecranPath;
   final int nbFavoris;
 
   /// Membres dont le nom est connu (favoris enregistrés avec le profil),
@@ -369,10 +339,10 @@ class FavoriClub {
 
   const FavoriClub({
     required this.mediaId,
-    required this.photoUrl,
+    required this.photoPath,
     required this.nbFavoris,
-    this.vignetteUrl,
-    this.ecranUrl,
+    this.vignettePath,
+    this.ecranPath,
     required this.membres,
     this.albumTitle,
     this.dernierAjout,

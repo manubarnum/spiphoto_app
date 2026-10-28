@@ -7,9 +7,9 @@ void main() {
     final FavoriClub favori = FavoritesService.favoriClubDepuisFiche('60153', {
       'favoriteCount': 3,
       'lastAddedAt': Timestamp.fromMillisecondsSinceEpoch(3000),
-      'photoUrl': 'https://exemple.fr/a.jpg',
-      'vignetteUrl': 'https://exemple.fr/a-320x320.jpg',
-      'ecranUrl': 'https://exemple.fr/a-1456x1920.jpg',
+      'photoPath': '2026/05/a.jpg',
+      'vignettePath': '2026/05/a-320x320.jpg',
+      'ecranPath': '2026/05/a-1456x1920.jpg',
       'albumTitle': 'Venise',
       'membres': {
         'uid-b': {
@@ -28,7 +28,8 @@ void main() {
 
     expect(favori.mediaId, '60153');
     expect(favori.nbFavoris, 3);
-    expect(favori.vignetteUrl, 'https://exemple.fr/a-320x320.jpg');
+    expect(favori.photoPath, '2026/05/a.jpg');
+    expect(favori.vignettePath, '2026/05/a-320x320.jpg');
     expect(favori.albumTitle, 'Venise');
     expect(favori.dernierAjout, DateTime.fromMillisecondsSinceEpoch(3000));
     // Premiers à l'avoir choisie en tête.
@@ -39,7 +40,7 @@ void main() {
   test('favoriClubDepuisFiche sans membres', () {
     final FavoriClub favori = FavoritesService.favoriClubDepuisFiche('1', {
       'favoriteCount': 1,
-      'photoUrl': 'https://exemple.fr/b.jpg',
+      'photoPath': '2026/05/b.jpg',
     });
     expect(favori.membres, isEmpty);
     expect(favori.dernierAjout, isNull);
