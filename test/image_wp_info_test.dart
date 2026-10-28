@@ -8,8 +8,8 @@ void main() {
 
   group('cheminMedia', () {
     test('garde le chemin qui suit /wp-content/uploads/', () {
-      expect(cheminMedia('$dossier/photo-scaled.jpg'),
-          '2026/05/photo-scaled.jpg');
+      expect(
+          cheminMedia('$dossier/photo-scaled.jpg'), '2026/05/photo-scaled.jpg');
       // Même chemin depuis le site local.
       expect(
           cheminMedia(
