@@ -1,59 +1,80 @@
 // image_wp_info.dart
 
-/// Suffixe de taille ajouté par WordPress aux fichiers image (ex. "-150x150",
-/// "-300x300"). Ce réglage ("Taille des vignettes") a changé au fil du temps
-/// sur le site — on le détecte donc par motif plutôt que par valeur fixe.
-final RegExp wpImageSizeSuffix = RegExp(r'-\d+x\d+(?=\.[a-zA-Z]+$)');
+/// Dossier des médias du site de production. Les favoris ne stockent que le
+/// chemin qui suit `/wp-content/uploads/` : chaque client (app, site local,
+/// site de production) y ajoute son propre préfixe.
+const String dossierMedias =
+    'https://www.spiphoto.fr/wordpress/wp-content/uploads/';
 
-/// Retire le suffixe de taille WordPress d'une URL pour retrouver le nom de
-/// fichier de l'image originale (plein format).
-String stripWpImageSize(String url) => url.replaceFirst(wpImageSizeSuffix, '');
+const String _repereMedias = '/wp-content/uploads/';
 
-/// Insère un suffixe de taille avant l'extension d'une URL déjà dépourvue
-/// de suffixe (voir [stripWpImageSize]).
-String insertWpImageSize(String baseUrl, String suffix) {
-  final int lastDot = baseUrl.lastIndexOf('.');
-  if (lastDot == -1) return baseUrl;
-  return '${baseUrl.substring(0, lastDot)}$suffix${baseUrl.substring(lastDot)}';
+/// Chemin d'une image relatif au dossier des médias (« 2026/07/photo.jpg »),
+/// ou null si l'URL n'est pas celle d'un média WordPress.
+String? cheminMedia(String url) {
+  final int debut = url.indexOf(_repereMedias);
+  if (debut == -1) return null;
+  return url.substring(debut + _repereMedias.length);
 }
 
+/// URL complète d'un média de production à partir de son chemin relatif.
+String urlMedia(String chemin) => '$dossierMedias$chemin';
+
+/// Une photo et ses trois tailles, fournies par le champ `spi_images` de
+/// l'API (mu-plugin spi-images-rest.php du site).
 class ImageWpInfo {
-  final String portraitUrl; // src original WordPress (taille variable)
-  final String thumbnailUrl; // 320x320 — vignette (reconstruite)
-  final String fallbackUrl; // repli si la vignette 320x320 est absente
-  final String landscapeUrl; // full — plein écran
+  /// Identifiant du média WordPress (« 64519 ») : clé des favoris dans
+  /// Firestore, identique sur le site local et en production. null si la
+  /// photo n'en a pas : elle ne peut alors pas être mise en favori.
+  final String? mediaId;
+  final String thumbnailUrl; // vignette carrée 320 px — grilles
+  final String ecranUrl; // taille « large » (1920 px max) — affichage
+  final String landscapeUrl; // original — fond d'écran, partage
   final String description;
-  final bool isFavorite;
+
+  /// Titre de l'album d'origine, quand il est connu au niveau de la photo
+  /// (fil du Club : chaque photo vient d'un album différent).
+  final String? album;
 
   ImageWpInfo({
-    required this.portraitUrl,
+    required this.mediaId,
     required this.thumbnailUrl,
-    required this.fallbackUrl,
+    required this.ecranUrl,
     required this.landscapeUrl,
     required this.description,
-    this.isFavorite = false,
+    this.album,
   });
 
-  /// Reconstruit un ImageWpInfo à partir de la seule URL plein format
-  /// (landscapeUrl), telle que stockée dans Firestore pour les favoris.
-  ///
-  /// On retire d'abord un éventuel suffixe de taille déjà présent (défense
-  /// contre d'anciennes entrées Firestore enregistrées avant ce correctif,
-  /// où landscapeUrl gardait par erreur son suffixe d'origine) avant
-  /// d'insérer les suffixes de taille voulus.
-  /// Exemple :
-  ///   .../photo.jpg  →  .../photo-150x150.jpg  (portraitUrl)
-  ///                  →  .../photo-320x320.jpg  (thumbnailUrl / fallbackUrl)
-  factory ImageWpInfo.fromFavoriteUrl(String landscapeUrl) {
-    final String baseUrl = stripWpImageSize(landscapeUrl);
-
+  /// Une entrée de `spi_images`. Une taille absente retombe sur l'original.
+  factory ImageWpInfo.fromJson(Map<String, dynamic> json,
+      {String description = ''}) {
+    final String original = json['original'] as String? ?? '';
+    final Object? id = json['id'];
     return ImageWpInfo(
-      portraitUrl: insertWpImageSize(baseUrl, '-150x150'),
-      thumbnailUrl: insertWpImageSize(baseUrl, '-320x320'),
-      fallbackUrl: baseUrl,
-      landscapeUrl: baseUrl,
-      description: 'Photo favorite',
-      isFavorite: true,
+      mediaId: id is int ? '$id' : null,
+      thumbnailUrl: json['vignette'] as String? ?? original,
+      ecranUrl: json['ecran'] as String? ?? original,
+      landscapeUrl: original,
+      description: description,
+    );
+  }
+
+  /// Photo favorite, à partir de l'identifiant et des chemins relatifs
+  /// enregistrés dans Firestore. Une taille absente retombe sur l'original.
+  factory ImageWpInfo.favori({
+    required String mediaId,
+    required String photoPath,
+    String? vignettePath,
+    String? ecranPath,
+    String? album,
+  }) {
+    final String original = urlMedia(photoPath);
+    return ImageWpInfo(
+      mediaId: mediaId,
+      thumbnailUrl: vignettePath != null ? urlMedia(vignettePath) : original,
+      ecranUrl: ecranPath != null ? urlMedia(ecranPath) : original,
+      landscapeUrl: original,
+      description: album ?? 'Photo favorite',
+      album: album,
     );
   }
 }

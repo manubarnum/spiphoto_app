@@ -1,25 +1,32 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:extended_image/extended_image.dart';
 import 'package:spiphoto_app/spi_colors.dart';
 import 'package:spiphoto_app/interface/appbar_accueil.dart';
+import 'package:spiphoto_app/interface/bottom_nav.dart';
 import 'package:spiphoto_app/interface/album_list.dart';
 import 'package:spiphoto_app/interface/album_details_screen.dart';
 import 'package:spiphoto_app/interface/favoris_screen.dart';
 import 'package:spiphoto_app/interface/club_screen.dart';
 import 'package:spiphoto_app/service/acces_wordpress.dart';
 import 'package:spiphoto_app/service/auth_service.dart';
+import 'package:spiphoto_app/service/theme_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
   await AuthService.instance.initialize();
-  // Barre de statut transparente — immersif magazine
+  await ThemeService.instance.init();
+  // Cache disque des images (extended_image) : jamais purgé seul. On retire
+  // les fichiers de plus de 30 jours, sans retarder le démarrage.
+  unawaited(clearDiskCachedImages(duration: const Duration(days: 30)));
+  // Barre de statut transparente — immersif magazine. La couleur des icônes
+  // suit le thème (AppBarTheme.systemOverlayStyle).
   SystemChrome.setSystemUIOverlayStyle(
-    const SystemUiOverlayStyle(
-      statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.light,
-    ),
+    const SystemUiOverlayStyle(statusBarColor: Colors.transparent),
   );
   runApp(const MyApp());
 }
@@ -32,80 +39,79 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'SPIPHOTO',
-      debugShowCheckedModeBanner: false,
-      theme: _buildTheme(),
-      home: const ScaffoldWithNavigation(),
+    // Jour / nuit : choix de l'utilisateur, sinon réglage de l'appareil.
+    return ValueListenableBuilder<bool?>(
+      valueListenable: ThemeService.instance.sombre,
+      builder: (context, sombre, _) => MaterialApp(
+        title: 'SPIPHOTO',
+        debugShowCheckedModeBanner: false,
+        theme: _buildTheme(SpiPalette.clair, Brightness.light),
+        darkTheme: _buildTheme(SpiPalette.sombre, Brightness.dark),
+        themeMode: switch (sombre) {
+          true => ThemeMode.dark,
+          false => ThemeMode.light,
+          null => ThemeMode.system,
+        },
+        home: const ScaffoldWithNavigation(),
+      ),
     );
   }
 
-  ThemeData _buildTheme() {
+  ThemeData _buildTheme(SpiPalette p, Brightness luminosite) {
+    final bool sombre = luminosite == Brightness.dark;
+
     return ThemeData(
       useMaterial3: true,
-      brightness: Brightness.dark,
+      brightness: luminosite,
+      extensions: [p],
 
       // ── Couleurs ────────────────────────────────────────────────────────
-      colorScheme: const ColorScheme.dark(
+      // L'olive et le texte crème posé dessus ne changent pas avec le thème.
+      colorScheme: ColorScheme(
+        brightness: luminosite,
         primary: SpiColors.olive,
         onPrimary: SpiColors.texte,
         primaryContainer: SpiColors.oliveFonce,
         onPrimaryContainer: SpiColors.texte,
-        secondary: SpiColors.mauve,
+        secondary: p.mauve,
         onSecondary: SpiColors.texte,
         secondaryContainer: SpiColors.mauveFonce,
         onSecondaryContainer: SpiColors.texte,
-        surface: SpiColors.surface,
-        onSurface: SpiColors.texte,
-        surfaceContainerHighest: SpiColors.surfaceAlt,
+        surface: p.surface,
+        onSurface: p.encre,
+        onSurfaceVariant: p.encreSecondaire,
+        surfaceContainerHighest: p.surfaceAlt,
         error: SpiColors.erreur,
         onError: SpiColors.texte,
       ),
 
-      scaffoldBackgroundColor: SpiColors.noir,
+      scaffoldBackgroundColor: p.fond,
 
       // ── AppBar ──────────────────────────────────────────────────────────
-      appBarTheme: const AppBarTheme(
-        backgroundColor: SpiColors.surface,
-        foregroundColor: SpiColors.texte,
+      appBarTheme: AppBarTheme(
+        backgroundColor: p.surface,
+        foregroundColor: p.encre,
         elevation: 0,
         scrolledUnderElevation: 0,
         centerTitle: true,
+        // Icônes de la barre d'état lisibles sur la barre d'app
+        systemOverlayStyle:
+            sombre ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
         titleTextStyle: TextStyle(
-          color: SpiColors.texte,
+          color: p.encre,
           fontSize: 16.0,
           fontWeight: FontWeight.w700,
           letterSpacing: 3.0, // effet magazine éditorial
         ),
         iconTheme: IconThemeData(
-          color: SpiColors.texte,
+          color: p.encre,
           size: 24.0,
         ),
       ),
 
-      // ── BottomNavigationBar ─────────────────────────────────────────────
-      bottomNavigationBarTheme: const BottomNavigationBarThemeData(
-        backgroundColor: SpiColors.surface,
-        selectedItemColor: SpiColors.mauve, // mauve pour l'actif
-        unselectedItemColor: SpiColors.texteMuted,
-        selectedLabelStyle: TextStyle(
-          fontWeight: FontWeight.w700,
-          fontSize: 11,
-          letterSpacing: 0.5,
-        ),
-        unselectedLabelStyle: TextStyle(
-          fontWeight: FontWeight.w400,
-          fontSize: 11,
-        ),
-        showSelectedLabels: true,
-        showUnselectedLabels: true,
-        type: BottomNavigationBarType.fixed,
-        elevation: 8,
-      ),
-
       // ── Cards ────────────────────────────────────────────────────────────
       cardTheme: CardThemeData(
-        color: SpiColors.surface,
+        color: p.surface,
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12.0),
@@ -115,39 +121,46 @@ class MyApp extends StatelessWidget {
       ),
 
       // ── Divider ──────────────────────────────────────────────────────────
-      dividerTheme: const DividerThemeData(
-        color: SpiColors.surfaceAlt,
+      dividerTheme: DividerThemeData(
+        color: p.surfaceAlt,
         thickness: 1,
         space: 1,
       ),
 
       // ── Icons ────────────────────────────────────────────────────────────
-      iconTheme: const IconThemeData(
-        color: SpiColors.texte,
+      iconTheme: IconThemeData(
+        color: p.encre,
         size: 24.0,
       ),
 
       // ── ProgressIndicator ────────────────────────────────────────────────
-      progressIndicatorTheme: const ProgressIndicatorThemeData(
-        color: SpiColors.mauve,
+      progressIndicatorTheme: ProgressIndicatorThemeData(
+        color: p.mauve,
+      ),
+
+      // ── BottomSheet (panneau « Mon compte ») ─────────────────────────────
+      bottomSheetTheme: BottomSheetThemeData(
+        backgroundColor: p.surface,
+        modalBackgroundColor: p.surface,
+        dragHandleColor: p.encreTertiaire,
       ),
 
       // ── SnackBar ─────────────────────────────────────────────────────────
-      snackBarTheme: const SnackBarThemeData(
-        backgroundColor: SpiColors.surfaceHigh,
-        contentTextStyle: TextStyle(color: SpiColors.texte),
-        actionTextColor: SpiColors.mauveClair,
+      snackBarTheme: SnackBarThemeData(
+        backgroundColor: p.surfaceElevee,
+        contentTextStyle: TextStyle(color: p.encre),
+        actionTextColor: p.accent,
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
+        shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.all(Radius.circular(8)),
         ),
       ),
 
       // ── Chips (pour filtres futurs) ──────────────────────────────────────
       chipTheme: ChipThemeData(
-        backgroundColor: SpiColors.surfaceAlt,
+        backgroundColor: p.surfaceAlt,
         selectedColor: SpiColors.oliveFonce,
-        labelStyle: const TextStyle(color: SpiColors.texte, fontSize: 13),
+        labelStyle: TextStyle(color: p.encre, fontSize: 13),
         side: BorderSide.none,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
@@ -155,58 +168,58 @@ class MyApp extends StatelessWidget {
       ),
 
       // ── Typographie ──────────────────────────────────────────────────────
-      textTheme: const TextTheme(
+      textTheme: TextTheme(
         // Grands titres — nom d'album en détail
         headlineMedium: TextStyle(
-          color: SpiColors.texte,
+          color: p.encre,
           fontSize: 26.0,
           fontWeight: FontWeight.w800,
           letterSpacing: 1.0,
           height: 1.2,
         ),
         headlineSmall: TextStyle(
-          color: SpiColors.texte,
+          color: p.encre,
           fontSize: 22.0,
           fontWeight: FontWeight.w700,
           letterSpacing: 1.5,
         ),
         // Titres de cartes
         titleLarge: TextStyle(
-          color: SpiColors.texte,
+          color: p.encre,
           fontSize: 17.0,
           fontWeight: FontWeight.w700,
           letterSpacing: 0.8,
         ),
         titleMedium: TextStyle(
-          color: SpiColors.texte,
+          color: p.encre,
           fontSize: 15.0,
           fontWeight: FontWeight.w600,
           letterSpacing: 0.3,
         ),
         titleSmall: TextStyle(
-          color: SpiColors.texte,
+          color: p.encre,
           fontSize: 13.0,
           fontWeight: FontWeight.w600,
         ),
         // Corps de texte
         bodyLarge: TextStyle(
-          color: SpiColors.texte,
+          color: p.encre,
           fontSize: 15.0,
           height: 1.5,
         ),
         bodyMedium: TextStyle(
-          color: SpiColors.texte,
+          color: p.encre,
           fontSize: 13.0,
           height: 1.4,
         ),
         // Textes secondaires — date, nb photos…
         bodySmall: TextStyle(
-          color: SpiColors.texteMuted,
+          color: p.encreSecondaire,
           fontSize: 12.0,
           letterSpacing: 0.4,
         ),
         labelSmall: TextStyle(
-          color: SpiColors.texteMuted,
+          color: p.encreSecondaire,
           fontSize: 10.0,
           letterSpacing: 1.0,
           fontWeight: FontWeight.w500,
@@ -229,6 +242,11 @@ class ScaffoldWithNavigation extends StatefulWidget {
 class _ScaffoldWithNavigationState extends State<ScaffoldWithNavigation> {
   int _currentIndex = 0;
 
+  // Onglets déjà ouverts. IndexedStack construit tous ses enfants : sans
+  // cela, le fil du Club et l'écoute des favoris partiraient dès le
+  // lancement, même si l'onglet n'est jamais ouvert.
+  final Set<int> _ongletsVisites = {0};
+
   // Clés pour conserver l'état de chaque onglet (Navigator indépendant)
   final List<GlobalKey<NavigatorState>> _navigatorKeys = [
     GlobalKey<NavigatorState>(),
@@ -247,6 +265,36 @@ class _ScaffoldWithNavigationState extends State<ScaffoldWithNavigation> {
     return true; // ferme l'app si rien à dépiler
   }
 
+  // Ramène un onglet à sa page racine (ex. d'un album vers la liste).
+  void _revenirALaRacine(int index) {
+    _navigatorKeys[index].currentState?.popUntil((route) => route.isFirst);
+  }
+
+  void _afficherOnglet(int index) {
+    setState(() {
+      _currentIndex = index;
+      _ongletsVisites.add(index);
+    });
+  }
+
+  // Logo de la barre d'accueil : retour à l'accueil depuis n'importe quel
+  // onglet, en refermant l'album éventuellement ouvert.
+  void _revenirAccueil() {
+    _afficherOnglet(0);
+    _revenirALaRacine(0);
+  }
+
+  void _surOnglet(int index) {
+    if (index == _currentIndex) {
+      _revenirALaRacine(index);
+    } else {
+      _afficherOnglet(index);
+    }
+  }
+
+  // La barre d'accueil est portée par la page racine de chaque onglet, et
+  // non par le Scaffold global : un album s'ouvre ainsi dans l'onglet, avec
+  // sa propre barre de retour, en gardant la nav basse.
   Widget _buildNavigator(int index, Widget child) {
     return Navigator(
       key: _navigatorKeys[index],
@@ -257,9 +305,24 @@ class _ScaffoldWithNavigationState extends State<ScaffoldWithNavigation> {
             builder: (_) => AlbumDetailsScreen(album: album),
           );
         }
-        return MaterialPageRoute(builder: (_) => child);
+        return MaterialPageRoute(
+          builder: (_) => Scaffold(
+            appBar: MyAppBarAccueil(
+              onLogoTap: _revenirAccueil,
+              onMesFavoris: () => _afficherOnglet(1),
+            ),
+            body: child,
+          ),
+        );
       },
     );
+  }
+
+  // Un onglet jamais ouvert reste vide ; une fois ouvert, il est conservé.
+  Widget _onglet(int index, Widget child) {
+    return _ongletsVisites.contains(index)
+        ? _buildNavigator(index, child)
+        : const SizedBox.shrink();
   }
 
   @override
@@ -272,38 +335,20 @@ class _ScaffoldWithNavigationState extends State<ScaffoldWithNavigation> {
         if (!didPop) _onPopInvoked();
       },
       child: Scaffold(
-        appBar: const MyAppBarAccueil(),
         body: IndexedStack(
           index: _currentIndex,
           children: [
             // Onglet 0 — Albums
-            _buildNavigator(0, const MyList()),
+            _onglet(0, const MyList()),
             // Onglet 1 — Mes Favoris
-            _buildNavigator(1, const FavorisScreen()),
+            _onglet(1, const FavorisScreen()),
             // Onglet 2 — Club
-            _buildNavigator(2, const ClubScreen()),
+            _onglet(2, const ClubScreen()),
           ],
         ),
-        bottomNavigationBar: BottomNavigationBar(
+        bottomNavigationBar: SpiBottomNav(
           currentIndex: _currentIndex,
-          onTap: (index) => setState(() => _currentIndex = index),
-          items: const [
-            BottomNavigationBarItem(
-              icon: Icon(Icons.photo_library_outlined),
-              activeIcon: Icon(Icons.photo_library),
-              label: 'Albums',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.favorite_border),
-              activeIcon: Icon(Icons.favorite),
-              label: 'Mes favoris',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.groups_outlined),
-              activeIcon: Icon(Icons.groups),
-              label: 'Club',
-            ),
-          ],
+          onTap: _surOnglet,
         ),
       ),
     );

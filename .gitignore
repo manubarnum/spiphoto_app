@@ -47,3 +47,6 @@ key.properties
 *.jks
 android/key.properties
 **/problems-report.html
+
+# Maquettes de la refonte (références, hors code de l'app)
+design_handoff/

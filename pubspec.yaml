@@ -1,7 +1,7 @@
 name: spiphoto_app
 description: "A SPIPHOTO project."
 publish_to: "none"
-version: 1.5.0+3
+version: 1.6.0+4
 
 environment:
   sdk: ">=3.3.3 <4.0.0"
@@ -11,15 +11,14 @@ dependencies:
   flutter:
     sdk: flutter
   http: ^1.4.0
-  html: ^0.15.4
   url_launcher: ^6.3.2
-  easy_image_viewer: ^1.4.1
   extended_image: ^10.0.1
   share_plus: ^13.3.0
   firebase_core: ^4.14.0
   firebase_auth: ^6.6.1
   cloud_firestore: ^6.9.0
   google_sign_in: ^7.2.0
+  shared_preferences: ^2.5.6
 
 # ── Dépendances de développement ─────────────────────────────────────────────
 dev_dependencies:
@@ -45,4 +44,3 @@ flutter:
     - android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
     - android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
     - assets/icons/mon_logo1.png
-    - assets/ca/lets-encrypt-r3.pem
