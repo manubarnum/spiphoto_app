@@ -50,7 +50,7 @@ class PageViewScreen extends StatefulWidget {
 }
 
 class _PageViewScreenState extends State<PageViewScreen> {
-  late final PageController _pageController;
+  late final ExtendedPageController _pageController;
   // Photo affichée. Un glissement ne reconstruit que ce qui en dépend
   // (compteur, légende, cœur, indicateurs), pas le PageView ni le voile.
   late final ValueNotifier<int> _index;
@@ -67,7 +67,7 @@ class _PageViewScreenState extends State<PageViewScreen> {
   void initState() {
     super.initState();
     _index = ValueNotifier(widget.initialIndex);
-    _pageController = PageController(initialPage: widget.initialIndex);
+    _pageController = ExtendedPageController(initialPage: widget.initialIndex);
     _favoris = _idsFavoris();
     _favorisPartages.addListener(_majFavoris);
   }
@@ -135,7 +135,7 @@ class _PageViewScreenState extends State<PageViewScreen> {
           fit: StackFit.expand,
           children: [
             // ── Photos ─────────────────────────────────────────────────────
-            PageView.builder(
+            ExtendedImageGesturePageView.builder(
               controller: _pageController,
               itemCount: widget.imageInfos.length,
               onPageChanged: (index) => _index.value = index,
@@ -322,6 +322,14 @@ class _PhotoPleinCadre extends StatelessWidget {
       url,
       fit: BoxFit.cover,
       mode: ExtendedImageMode.gesture,
+      // Double-tap : x2 centré sur le point touché, ou retour à l'échelle 1.
+      onDoubleTap: (ExtendedImageGestureState state) {
+        final double echelle = state.gestureDetails?.totalScale ?? 1.0;
+        state.handleDoubleTap(
+          scale: echelle > 1.0 ? 1.0 : 2.0,
+          doubleTapPosition: state.pointerDownPosition,
+        );
+      },
       loadStateChanged: (ExtendedImageState state) {
         switch (state.extendedImageLoadState) {
           case LoadState.loading:
@@ -354,7 +362,7 @@ class _PhotoPleinCadre extends StatelessWidget {
         speed: 1.0,
         inertialSpeed: 100.0,
         initialScale: 1.0,
-        inPageView: false,
+        inPageView: true,
       ),
     );
   }
