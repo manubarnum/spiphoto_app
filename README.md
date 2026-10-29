@@ -11,7 +11,8 @@ Application mobile du club photo **SPIPHOTO**, développée avec Flutter. Elle p
 - 🔍 **Visionneuse plein écran** — swipe entre les photos, zoom (pinch-to-zoom), barre d'actions fond d'écran / favori / partage
 - 🖥️ **Fond d'écran avec aperçu** — choix de l'écran (accueil, verrouillage ou les deux), recadrage (zoom et déplacement) dans une maquette aux proportions du téléphone, puis pose
 - ❤️ **Mes favoris** — les photos mises en favori, de la plus récente à la plus ancienne, synchronisées en temps réel
-- 👥 **Le Club** — les photos préférées des membres, triables par nombre de favoris ou par date, avec les membres qui les ont choisies
+- 👥 **Le Club** — les photos préférées des membres, triables par nombre de favoris ou par date, avec les membres qui les ont choisies ; en tête, un bandeau annonce le prochain rendez-vous du club (un tap ouvre l'agenda, la croix le masque)
+- 📅 **Agenda du Club** — les rendez-vous à venir du calendrier Google du club, regroupés par mois, avec description dépliable et lieu ouvert dans l'application de cartes ; les événements récurrents et sur plusieurs jours sont pris en charge
 - 👤 **Compte** — connexion Google réservée aux comptes **@spiphoto.fr**, depuis l'icône en haut à droite
 - 🌗 **Mode jour / nuit** — même palette et même comportement que le site : suit le réglage du téléphone, puis garde le choix de l'utilisateur
 - 📤 **Partage** — partage d'une image avec légende via les apps installées
@@ -24,13 +25,14 @@ Application mobile du club photo **SPIPHOTO**, développée avec Flutter. Elle p
 |---|---|
 | [Flutter](https://flutter.dev) / [Dart](https://dart.dev) | Framework et langage |
 | WordPress REST API | Source des albums et des photos |
+| Google Agenda (flux iCal public) | Rendez-vous du club |
 | Firebase Auth + `google_sign_in` | Connexion Google des membres (@spiphoto.fr) |
 | Cloud Firestore | Favoris des membres et fil du Club |
 | `http`, `html` | Appels à l'API WordPress, extraction des images des articles |
 | `extended_image` | Visionneuse avec zoom et cache des images |
 | `share_plus` | Partage natif d'images |
 | `shared_preferences` | Mémorisation du mode jour / nuit |
-| `url_launcher` | Ouverture du site du club |
+| `url_launcher` | Ouverture du site du club et des lieux dans l'app de cartes |
 
 ---
 
@@ -52,10 +54,14 @@ lib/
 │   ├── wallpaper_preview_screen.dart  # Aperçu et pose du fond d'écran
 │   ├── favoris_screen.dart            # Mes favoris
 │   ├── club_screen.dart               # Le Club
+│   ├── club_event_banner.dart         # Bandeau « Prochain rendez-vous »
+│   ├── agenda_screen.dart             # Agenda du Club
+│   ├── dates_agenda.dart              # Dates en français (sans dépendance intl)
 │   ├── compte_sheet.dart              # Panneau « Mon compte »
 │   └── connexion_requise.dart         # Invitation à se connecter
 └── service/
     ├── acces_wordpress.dart           # API WordPress (pagination) + modèle Album
+    ├── agenda_service.dart            # Calendrier du club (iCal : récurrences, dates exclues)
     ├── image_wp_info.dart             # Modèle ImageWpInfo
     ├── auth_service.dart              # Connexion Google / Firebase Auth
     ├── favorites_service.dart         # Favoris et fil du Club (Firestore)
@@ -66,7 +72,10 @@ lib/
 
 android/app/src/main/kotlin/.../MainActivity.kt   # Pose du fond d'écran (recadrage), moteur Flutter en cache
 test/
-└── theme_service_test.dart            # Tests du mode jour / nuit
+├── agenda_service_test.dart           # Lecture du calendrier iCal
+├── favorites_service_test.dart        # Favoris et fiches du Club
+├── image_wp_info_test.dart            # Modèle des images WordPress
+└── theme_service_test.dart            # Mode jour / nuit
 
 assets/
 └── icons/
@@ -76,6 +85,8 @@ assets/
 ---
 
 ## 📲 Téléchargement
+
+> 🧪 **Version 1.6.0 (refonte du design) en test interne sur le Play Store.** Une publication publique est prévue ensuite, sous un nouveau nom choisi avec les adhérents.
 
 | Public | Lien |
 |---|---|
@@ -138,6 +149,15 @@ build/app/outputs/flutter-apk/
 > 🔑 `android/key.properties` (clé de signature) n'est pas versionné : il doit être présent sur la machine qui génère la version de release.
 > Avant d'envoyer une nouvelle version sur le Play Store, augmentez le numéro après le `+` dans `pubspec.yaml` (`version: x.y.z+N`).
 
+### Repérer une version envoyée
+
+Pour retrouver le code exact d'une version envoyée sur le Play Store, posez une étiquette Git (`v1.6.0+4`, etc.) sur le commit qui a servi à la construire :
+
+```bash
+git tag -a v1.6.0+4 -m "Version 1.6.0+4 envoyée en test interne"
+git push origin v1.6.0+4
+```
+
 ---
 
 ## 📱 Plateformes supportées
@@ -175,6 +195,10 @@ L'URL de l'API est définie dans `lib/service/acces_wordpress.dart`. Les albums 
 | `photoStats/{photo}` | `favoriteCount` : nombre de favoris par photo |
 
 > 🔐 Si l'app est signée par le Play Store (Play App Signing), déclarez l'empreinte **SHA-1** de la clé de signature Play dans la console Firebase, sans quoi la connexion Google échoue dans la version installée depuis le Store.
+
+### Agenda du Club
+
+L'adresse du flux iCal public du calendrier Google est définie dans `lib/service/agenda_service.dart` (`_icsUrl`). Le calendrier doit rester public pour que l'app puisse le lire, sans connexion.
 
 ### Mode jour / nuit
 
