@@ -25,6 +25,22 @@ class AgendaService {
       'c_e646eb53b9f53a11d8431102d8c4fb2f1120fa4c8963e5c80c876f43b145d7c2'
       '%40group.calendar.google.com/public/basic.ics';
 
+  /// Page agenda du site, pour le détail des événements.
+  static final Uri agendaUrl = Uri.parse('https://www.spiphoto.fr/agenda/');
+
+  // Dernier événement fermé par l'utilisateur, en mémoire seulement : le
+  // bandeau revient au prochain lancement de l'app.
+  static String? _masque;
+
+  static String _id(ClubEvent e) =>
+      '${e.start.toUtc().toIso8601String()}|${e.title}';
+
+  /// Le bandeau fermé reste masqué pour cet événement jusqu'à la fin de la
+  /// session ; le suivant s'affichera normalement.
+  static void masquer(ClubEvent event) => _masque = _id(event);
+
+  static bool estMasque(ClubEvent event) => _masque == _id(event);
+
   /// Renvoie le prochain événement à venir (ou en cours), null si aucun ou
   /// en cas d'erreur réseau : le bandeau est alors simplement masqué.
   static Future<ClubEvent?> fetchNextEvent() async {

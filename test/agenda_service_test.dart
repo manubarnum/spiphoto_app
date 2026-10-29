@@ -114,4 +114,12 @@ void main() {
       expect(AgendaService.nextEvent(events, DateTime(2027)), isNull);
     });
   });
+
+  test('un événement fermé reste masqué, pas le suivant', () {
+    expect(AgendaService.estMasque(nomme('RDV Asso')), isFalse);
+
+    AgendaService.masquer(nomme('RDV Asso'));
+    expect(AgendaService.estMasque(nomme('RDV Asso')), isTrue);
+    expect(AgendaService.estMasque(nomme('TELETHON 2026')), isFalse);
+  });
 }

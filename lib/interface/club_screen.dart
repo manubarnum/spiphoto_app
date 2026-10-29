@@ -2,6 +2,7 @@ import 'package:extended_image/extended_image.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:spiphoto_app/spi_colors.dart';
 import 'package:spiphoto_app/service/agenda_service.dart';
 import 'package:spiphoto_app/service/auth_service.dart';
@@ -50,8 +51,8 @@ class _FilDuClub extends StatefulWidget {
 
 class _FilDuClubState extends State<_FilDuClub> {
   late Future<List<FavoriClub>> _fil;
-  // Prochain événement de l'agenda : null (aucun ou hors ligne) masque le
-  // bandeau.
+  // Prochain événement de l'agenda : null (aucun, hors ligne ou fermé par
+  // l'utilisateur) masque le bandeau.
   late Future<ClubEvent?> _prochain;
   TriClub _tri = TriClub.plusChoisies;
 
@@ -65,7 +66,7 @@ class _FilDuClubState extends State<_FilDuClub> {
   void initState() {
     super.initState();
     _fil = FavoritesService.instance.getFavorisDuClub(tri: _tri);
-    _prochain = AgendaService.fetchNextEvent();
+    _prochain = _chargerProchain();
     _mesFavoris = _idsFavoris();
     _favoris.addListener(_majFavoris);
   }
@@ -96,11 +97,34 @@ class _FilDuClubState extends State<_FilDuClub> {
 
   // Tirer-pour-rafraîchir : le fil et l'agenda ; le tri ne relit que le fil.
   Future<void> _rafraichir() async {
-    final Future<ClubEvent?> prochain = AgendaService.fetchNextEvent();
+    final Future<ClubEvent?> prochain = _chargerProchain();
     setState(() {
       _prochain = prochain;
     });
     await Future.wait([_recharger(), prochain]);
+  }
+
+  static Future<ClubEvent?> _chargerProchain() async {
+    final ClubEvent? event = await AgendaService.fetchNextEvent();
+    if (event == null || AgendaService.estMasque(event)) return null;
+    return event;
+  }
+
+  void _fermerProchain(ClubEvent event) {
+    setState(() {
+      _prochain = Future.value(null);
+    });
+    AgendaService.masquer(event);
+  }
+
+  Future<void> _ouvrirAgenda() async {
+    if (!await launchUrl(AgendaService.agendaUrl,
+        mode: LaunchMode.externalApplication)) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Impossible d\'ouvrir l\'agenda')),
+      );
+    }
   }
 
   void _changerTri() {
@@ -257,7 +281,11 @@ class _FilDuClubState extends State<_FilDuClub> {
                     if (event == null) return const SizedBox.shrink();
                     return Padding(
                       padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
-                      child: ClubEventBanner(event: event),
+                      child: ClubEventBanner(
+                        event: event,
+                        onOuvrir: _ouvrirAgenda,
+                        onFermer: () => _fermerProchain(event),
+                      ),
                     );
                   },
                 ),
