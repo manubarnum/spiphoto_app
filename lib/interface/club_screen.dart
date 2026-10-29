@@ -3,10 +3,12 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/material.dart';
 import 'package:spiphoto_app/spi_colors.dart';
+import 'package:spiphoto_app/service/agenda_service.dart';
 import 'package:spiphoto_app/service/auth_service.dart';
 import 'package:spiphoto_app/service/favorites_service.dart';
 import 'package:spiphoto_app/service/image_wp_info.dart';
 import 'package:spiphoto_app/interface/build_page_view.dart';
+import 'package:spiphoto_app/interface/club_event_banner.dart';
 import 'package:spiphoto_app/interface/connexion_requise.dart';
 import 'package:spiphoto_app/interface/wallpaper_preview_screen.dart';
 
@@ -48,6 +50,9 @@ class _FilDuClub extends StatefulWidget {
 
 class _FilDuClubState extends State<_FilDuClub> {
   late Future<List<FavoriClub>> _fil;
+  // Prochain événement de l'agenda : null (aucun ou hors ligne) masque le
+  // bandeau.
+  late Future<ClubEvent?> _prochain;
   TriClub _tri = TriClub.plusChoisies;
 
   // Identifiants des favoris de l'utilisateur, pour l'état du cœur de
@@ -60,6 +65,7 @@ class _FilDuClubState extends State<_FilDuClub> {
   void initState() {
     super.initState();
     _fil = FavoritesService.instance.getFavorisDuClub(tri: _tri);
+    _prochain = AgendaService.fetchNextEvent();
     _mesFavoris = _idsFavoris();
     _favoris.addListener(_majFavoris);
   }
@@ -86,6 +92,15 @@ class _FilDuClubState extends State<_FilDuClub> {
       _fil = fil;
     });
     return fil;
+  }
+
+  // Tirer-pour-rafraîchir : le fil et l'agenda ; le tri ne relit que le fil.
+  Future<void> _rafraichir() async {
+    final Future<ClubEvent?> prochain = AgendaService.fetchNextEvent();
+    setState(() {
+      _prochain = prochain;
+    });
+    await Future.wait([_recharger(), prochain]);
   }
 
   void _changerTri() {
@@ -195,7 +210,7 @@ class _FilDuClubState extends State<_FilDuClub> {
         return RefreshIndicator(
           color: context.spi.mauve,
           backgroundColor: context.spi.surface,
-          onRefresh: _recharger,
+          onRefresh: _rafraichir,
           child: CustomScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
             slivers: [
@@ -229,6 +244,22 @@ class _FilDuClubState extends State<_FilDuClub> {
                   margin: const EdgeInsets.fromLTRB(16, 12, 16, 16),
                   height: 1,
                   color: SpiColors.olive.withValues(alpha: 0.3),
+                ),
+              ),
+
+              // ── Prochain rendez-vous (masqué pendant le chargement,
+              // sans événement ou hors ligne) ─────────────────────────────
+              SliverToBoxAdapter(
+                child: FutureBuilder<ClubEvent?>(
+                  future: _prochain,
+                  builder: (context, snapshot) {
+                    final ClubEvent? event = snapshot.data;
+                    if (event == null) return const SizedBox.shrink();
+                    return Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+                      child: ClubEventBanner(event: event),
+                    );
+                  },
                 ),
               ),
 
