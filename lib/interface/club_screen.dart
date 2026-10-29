@@ -2,12 +2,12 @@ import 'package:extended_image/extended_image.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:spiphoto_app/spi_colors.dart';
 import 'package:spiphoto_app/service/agenda_service.dart';
 import 'package:spiphoto_app/service/auth_service.dart';
 import 'package:spiphoto_app/service/favorites_service.dart';
 import 'package:spiphoto_app/service/image_wp_info.dart';
+import 'package:spiphoto_app/interface/agenda_screen.dart';
 import 'package:spiphoto_app/interface/build_page_view.dart';
 import 'package:spiphoto_app/interface/club_event_banner.dart';
 import 'package:spiphoto_app/interface/connexion_requise.dart';
@@ -117,14 +117,10 @@ class _FilDuClubState extends State<_FilDuClub> {
     AgendaService.masquer(event);
   }
 
-  Future<void> _ouvrirAgenda() async {
-    if (!await launchUrl(AgendaService.agendaUrl,
-        mode: LaunchMode.externalApplication)) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Impossible d\'ouvrir l\'agenda')),
-      );
-    }
+  void _ouvrirAgenda() {
+    Navigator.of(context, rootNavigator: true).push(
+      MaterialPageRoute(builder: (_) => const AgendaScreen()),
+    );
   }
 
   void _changerTri() {

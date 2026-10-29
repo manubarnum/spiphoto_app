@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:spiphoto_app/spi_colors.dart';
 import 'package:spiphoto_app/service/agenda_service.dart';
+import 'package:spiphoto_app/interface/dates_agenda.dart';
 
 /// Bandeau « Prochain rendez-vous » en tête du Club : titre, date en
-/// français et lieu de l'événement. Un tap ouvre l'agenda du site, la croix
+/// français et lieu de l'événement. Un tap ouvre l'agenda du Club, la croix
 /// ferme le bandeau.
 class ClubEventBanner extends StatelessWidget {
   final ClubEvent event;
@@ -121,45 +122,4 @@ class ClubEventBanner extends StatelessWidget {
       ],
     );
   }
-}
-
-const List<String> _jours = [
-  'lundi',
-  'mardi',
-  'mercredi',
-  'jeudi',
-  'vendredi',
-  'samedi',
-  'dimanche',
-];
-
-const List<String> _mois = [
-  'janvier',
-  'février',
-  'mars',
-  'avril',
-  'mai',
-  'juin',
-  'juillet',
-  'août',
-  'septembre',
-  'octobre',
-  'novembre',
-  'décembre',
-];
-
-/// « jeudi 5 novembre · 18 h 30 », « samedi 1er novembre · 9 h », date
-/// seule pour une journée entière ; l'année n'apparaît que si elle diffère
-/// de l'année en cours. Écrit à la main : pas de dépendance intl.
-String dateEvenement(ClubEvent event, {DateTime? maintenant}) {
-  final DateTime d = event.start;
-  final String jour = d.day == 1 ? '1er' : '${d.day}';
-  final String annee =
-      d.year == (maintenant ?? DateTime.now()).year ? '' : ' ${d.year}';
-  final String date =
-      '${_jours[d.weekday - 1]} $jour ${_mois[d.month - 1]}$annee';
-  if (event.allDay) return date;
-  final String minutes =
-      d.minute == 0 ? '' : ' ${d.minute.toString().padLeft(2, '0')}';
-  return '$date · ${d.hour} h$minutes';
 }
