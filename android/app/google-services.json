@@ -14,6 +14,22 @@
       },
       "oauth_client": [
         {
+          "client_id": "786434708412-27rbldkjbk10o5iheviehkfreh3h0gge.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "fr.enkirche.spiphoto_app",
+            "certificate_hash": "6117c90e672c09191b074744c9b3d6fe14096bb5"
+          }
+        },
+        {
+          "client_id": "786434708412-c8bn907hbm93pk5tkl4itfjj80b88o0d.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "fr.enkirche.spiphoto_app",
+            "certificate_hash": "3f68088c2c12e5b31de86425d769930455c77581"
+          }
+        },
+        {
           "client_id": "786434708412-n6aj55i5taldp0olfcb2fuauohbfsojf.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
@@ -22,7 +38,7 @@
           }
         },
         {
-          "client_id": "786434708412-g527q9pgaii7mqfs4v9j3srpagsdiq33.apps.googleusercontent.com",
+          "client_id": "786434708412-ct9rkutbtra7oh1cf1p0bdo6rt8sp1a8.apps.googleusercontent.com",
           "client_type": 3
         }
       ],
@@ -35,7 +51,7 @@
         "appinvite_service": {
           "other_platform_oauth_client": [
             {
-              "client_id": "786434708412-g527q9pgaii7mqfs4v9j3srpagsdiq33.apps.googleusercontent.com",
+              "client_id": "786434708412-83kkmqp9tjrg7vgangc74msc81f1itbc.apps.googleusercontent.com",
               "client_type": 3
             }
           ]
