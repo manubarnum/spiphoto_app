@@ -254,15 +254,25 @@ class _ScaffoldWithNavigationState extends State<ScaffoldWithNavigation> {
     GlobalKey<NavigatorState>(),
   ];
 
-  // Intercepte le bouton retour Android — navigue dans l'onglet actif
-  bool _onPopInvoked() {
+  // Bouton retour Android, du plus profond vers la sortie :
+  //   1. dépile l'onglet actif (panneau, album…) ;
+  //   2. à la racine d'un autre onglet, revient aux Albums ;
+  //   3. à la racine des Albums, ferme l'application.
+  // Les écrans plein écran (visionneuse, aperçu, agenda) sont sur le
+  // Navigator racine : Flutter les ferme avant d'arriver ici.
+  Future<void> _surRetour() async {
     final NavigatorState? navigator =
         _navigatorKeys[_currentIndex].currentState;
+    // maybePop respecte un éventuel PopScope de l'écran affiché.
     if (navigator != null && navigator.canPop()) {
-      navigator.pop();
-      return false; // ne ferme pas l'app
+      await navigator.maybePop();
+      return;
     }
-    return true; // ferme l'app si rien à dépiler
+    if (_currentIndex != 0) {
+      _afficherOnglet(0);
+      return;
+    }
+    await SystemNavigator.pop();
   }
 
   // Ramène un onglet à sa page racine (ex. d'un album vers la liste).
@@ -328,11 +338,11 @@ class _ScaffoldWithNavigationState extends State<ScaffoldWithNavigation> {
   @override
   Widget build(BuildContext context) {
     return PopScope(
-      // canPop: false bloque le retour système,
-      // onPopInvokedWithResult gère la logique manuellement
+      // canPop: false intercepte le retour système ; _surRetour décide
+      // de dépiler, de revenir aux Albums ou de quitter.
       canPop: false,
       onPopInvokedWithResult: (didPop, result) {
-        if (!didPop) _onPopInvoked();
+        if (!didPop) _surRetour();
       },
       child: Scaffold(
         body: IndexedStack(
