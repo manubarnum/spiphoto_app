@@ -16,6 +16,7 @@ Application mobile du club photo **SPIPHOTO**, développée avec Flutter. Elle p
 - 👤 **Compte** — connexion Google réservée aux comptes **@spiphoto.fr**, depuis l'icône en haut à droite
 - 🌗 **Mode jour / nuit** — même palette et même comportement que le site : suit le réglage du téléphone, puis garde le choix de l'utilisateur
 - 📤 **Partage** — partage d'une image avec légende via les apps installées
+- ↩️ **Bouton retour** — referme l'écran ouvert, puis revient à l'onglet Albums, puis quitte l'application
 
 ---
 
@@ -28,7 +29,7 @@ Application mobile du club photo **SPIPHOTO**, développée avec Flutter. Elle p
 | Google Agenda (flux iCal public) | Rendez-vous du club |
 | Firebase Auth + `google_sign_in` | Connexion Google des membres (@spiphoto.fr) |
 | Cloud Firestore | Favoris des membres et fil du Club |
-| `http`, `html` | Appels à l'API WordPress, extraction des images des articles |
+| `http` | Appels à l'API WordPress (images fournies par le champ `spi_images`) |
 | `extended_image` | Visionneuse avec zoom et cache des images |
 | `share_plus` | Partage natif d'images |
 | `shared_preferences` | Mémorisation du mode jour / nuit |
@@ -176,11 +177,15 @@ git push origin v1.6.0+4
 
 ### WordPress
 
-L'URL de l'API est définie dans `lib/service/acces_wordpress.dart`. Les albums sont chargés par pages de 10, avec le nom de l'auteur :
+L'URL de l'API est définie dans `lib/service/acces_wordpress.dart`. Les albums sont chargés par pages de 10, avec le nom de l'auteur, en ne demandant que les champs utiles :
 
 ```dart
-'https://www.spiphoto.fr/wp-json/wp/v2/posts?_embed=author&page=$page'
+'https://www.spiphoto.fr/wp-json/wp/v2/posts?_embed=author'
+    '&_fields=id,link,title.rendered,spi_images,_links.author,_embedded'
+    '&_spi_gz=1&page=$page'
 ```
+
+`_spi_gz=1` demande au mu-plugin du site de servir la réponse sous un type que le serveur compresse en gzip (environ 95 % de données en moins).
 
 ### Firebase
 
@@ -191,8 +196,14 @@ L'URL de l'API est définie dans `lib/service/acces_wordpress.dart`. Les albums 
 
 | Collection | Contenu |
 |---|---|
-| `favoriteEvents/{uid}_{photo}` | Un favori : `userId`, `mediaId`, `photoUrl`, `createdAt`, et depuis la refonte `userName`, `userPhoto`, `albumTitle` (affichés dans le Club) |
-| `photoStats/{photo}` | `favoriteCount` : nombre de favoris par photo |
+| `favoriteEvents/{uid}_{mediaId}` | Un favori : `userId`, `mediaId`, `photoPath`, `vignettePath`, `ecranPath`, `createdAt`, et `userName`, `userPhoto`, `albumTitle` (affichés dans le Club) |
+| `photoStats/{mediaId}` | Fiche partagée d'une photo : `favoriteCount`, `lastAddedAt`, chemins de la photo, `albumTitle`, et `membres.{uid}` (`nom`, `photo`, `ajout`) qui alimente le fil du Club |
+
+`mediaId` est l'identifiant du média WordPress. Les `*Path` sont relatifs au dossier `/wp-content/uploads/` : chaque client y ajoute son domaine, ce qui fait fonctionner les favoris sur le site local comme en production.
+
+### API WordPress : champ `spi_images`
+
+Les photos d'un album sont lues dans le champ `spi_images` des articles, ajouté par le mu-plugin `spi-images-rest.php` du site : pour chaque photo, `id`, `vignette` (320 px), `ecran` (1920 px max) et `original`. Sans ce mu-plugin, les albums s'affichent vides.
 
 > 🔐 Si l'app est signée par le Play Store (Play App Signing), déclarez l'empreinte **SHA-1** de la clé de signature Play dans la console Firebase, sans quoi la connexion Google échoue dans la version installée depuis le Store.
 
@@ -203,6 +214,14 @@ L'adresse du flux iCal public du calendrier Google est définie dans `lib/servic
 ### Mode jour / nuit
 
 Le choix est enregistré sous la clé `spiphoto-theme` (`light` / `dark`), comme sur le site. Sans choix enregistré, l'app suit le réglage du téléphone.
+
+---
+
+## 📝 À faire
+
+Pour la prochaine version :
+
+- **Mode jour dans la visionneuse et l'aperçu du fond d'écran** : ces deux écrans restent sombres en mode jour (`build_page_view.dart`, `wallpaper_preview_screen.dart` utilisent des couleurs fixes). Garder le fond noir derrière les photos pour les mettre en valeur, mais faire suivre le thème à l'habillage (barres, boutons, réglages, cartes).
 
 ---
 
