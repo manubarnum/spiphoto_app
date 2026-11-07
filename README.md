@@ -185,7 +185,7 @@ L'URL de l'API est définie dans `lib/service/acces_wordpress.dart`. Les albums 
     '&_spi_gz=1&page=$page'
 ```
 
-`_spi_gz=1` demande au mu-plugin du site de servir la réponse sous un type que le serveur compresse en gzip (environ 95 % de données en moins).
+`_spi_gz=1` demande à l'extension « SPIPHOTO Site » du site de servir la réponse sous un type que le serveur compresse en gzip (environ 95 % de données en moins).
 
 ### Firebase
 
@@ -203,7 +203,7 @@ L'URL de l'API est définie dans `lib/service/acces_wordpress.dart`. Les albums 
 
 ### API WordPress : champ `spi_images`
 
-Les photos d'un album sont lues dans le champ `spi_images` des articles, ajouté par le mu-plugin `spi-images-rest.php` du site : pour chaque photo, `id`, `vignette` (320 px), `ecran` (1920 px max) et `original`. Sans ce mu-plugin, les albums s'affichent vides.
+Les photos d'un album sont lues dans le champ `spi_images` des articles, ajouté par l'extension WordPress « SPIPHOTO Site » (dépôt `spiphoto-site`, `includes/app-api.php`) : pour chaque photo, `id`, `vignette` (320 px), `ecran` (1920 px max) et `original`. Si l'extension est désactivée, les albums s'affichent vides.
 
 > 🔐 Si l'app est signée par le Play Store (Play App Signing), déclarez l'empreinte **SHA-1** de la clé de signature Play dans la console Firebase, sans quoi la connexion Google échoue dans la version installée depuis le Store.
 

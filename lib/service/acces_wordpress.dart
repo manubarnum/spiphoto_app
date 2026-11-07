@@ -81,11 +81,12 @@ class PageAlbums {
 
 /// Charge une page de 10 albums (taille par défaut de l'API WordPress).
 /// `_fields` ne garde que les champs lus par [Album.fromJson] : les photos
-/// arrivent par `spi_images` (mu-plugin spi-images-rest.php du site), sans
+/// arrivent par `spi_images` (extension « SPIPHOTO Site » du site,
+/// includes/app-api.php), sans
 /// le HTML de l'article. `_links.author` reste nécessaire, sans lui `_embed`
 /// ne renvoie plus l'auteur.
 /// Le serveur (o2switch) ne compresse pas application/json : `_spi_gz`
-/// demande au mu-plugin du site de servir la réponse sous un type que le
+/// demande à l'extension du site de servir la réponse sous un type que le
 /// serveur compresse en gzip (environ 95 % de moins). Le corps reste du
 /// JSON, décompressé automatiquement par le client HTTP.
 Future<PageAlbums> fetchAlbums({int page = 1}) async {

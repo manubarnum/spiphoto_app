@@ -31,7 +31,7 @@ Séparation stricte : `lib/service/` ne contient aucun code d'interface (pas de 
 
 **Thème** (`lib/spi_colors.dart`) : `SpiColors` = couleurs fixes de marque ; `SpiPalette` = `ThemeExtension` jour/nuit lue via `context.spi`. Toute couleur qui dépend du thème doit passer par `context.spi`, pas par `SpiColors`. Choix persisté sous la clé `spiphoto-theme` (même clé que le site) ; `null` = suivre l'appareil. La visionneuse (`build_page_view.dart`) et l'aperçu du fond d'écran (`wallpaper_preview_screen.dart`) utilisent encore des couleurs fixes sombres (point « À faire » du README).
 
-**Photos WordPress** (`service/image_wp_info.dart`, `service/acces_wordpress.dart`) : l'API REST `wp/v2/posts?_embed=author` (pages de 10) expose un champ `spi_images` ajouté par un mu-plugin du site (`spi-images-rest.php`) avec, par photo, `id`, `vignette`, `ecran`, `original`. `ImageWpInfo.mediaId` = identifiant du média WordPress ; une photo sans `mediaId` ne peut pas être mise en favori.
+**Photos WordPress** (`service/image_wp_info.dart`, `service/acces_wordpress.dart`) : l'API REST `wp/v2/posts?_embed=author` (pages de 10) expose un champ `spi_images` ajouté par l'extension WordPress « SPIPHOTO Site » (`~/Projects/spiphoto-site`, `includes/app-api.php`, qui gère aussi `_spi_gz` ; elle remplace depuis le 07/11/2026 les mu-plugins `spi-images-rest.php` et `spi-gzip-rest.php`) avec, par photo, `id`, `vignette`, `ecran`, `original`. `ImageWpInfo.mediaId` = identifiant du média WordPress ; une photo sans `mediaId` ne peut pas être mise en favori.
 
 **Favoris et Club** (`service/favorites_service.dart`, règles dans `service/firestore.rules`, déployées à la main depuis la console Firebase) :
 - `favoriteEvents/{uid}_{mediaId}` : un document par favori.

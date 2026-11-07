@@ -20,7 +20,7 @@ String? cheminMedia(String url) {
 String urlMedia(String chemin) => '$dossierMedias$chemin';
 
 /// Une photo et ses trois tailles, fournies par le champ `spi_images` de
-/// l'API (mu-plugin spi-images-rest.php du site).
+/// l'API (extension « SPIPHOTO Site » du site, includes/app-api.php).
 class ImageWpInfo {
   /// Identifiant du média WordPress (« 64519 ») : clé des favoris dans
   /// Firestore, identique sur le site local et en production. null si la
