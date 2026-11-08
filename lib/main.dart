@@ -7,19 +7,25 @@ import 'package:extended_image/extended_image.dart';
 import 'package:spiphoto_app/spi_colors.dart';
 import 'package:spiphoto_app/interface/appbar_accueil.dart';
 import 'package:spiphoto_app/interface/bottom_nav.dart';
-import 'package:spiphoto_app/interface/album_list.dart';
+import 'package:spiphoto_app/interface/onglet_albums.dart';
 import 'package:spiphoto_app/interface/album_details_screen.dart';
 import 'package:spiphoto_app/interface/favoris_screen.dart';
 import 'package:spiphoto_app/interface/club_screen.dart';
 import 'package:spiphoto_app/service/sources/modeles.dart';
+import 'package:spiphoto_app/service/sources/source_photos.dart';
 import 'package:spiphoto_app/service/auth_service.dart';
 import 'package:spiphoto_app/service/theme_service.dart';
+import 'package:spiphoto_app/service/sources/sources_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
   await AuthService.instance.initialize();
   await ThemeService.instance.init();
+  // Sources choisies (préférences, sans réseau), puis liste des galeries
+  // d'adhérents actualisée en arrière-plan.
+  await SourcesService.instance.init();
+  unawaited(SourcesService.instance.actualiserGaleries().catchError((_) {}));
   // Cache disque des images (extended_image) : jamais purgé seul. On retire
   // les fichiers de plus de 30 jours, sans retarder le démarrage.
   unawaited(clearDiskCachedImages(duration: const Duration(days: 30)));
@@ -310,9 +316,10 @@ class _ScaffoldWithNavigationState extends State<ScaffoldWithNavigation> {
       key: _navigatorKeys[index],
       onGenerateRoute: (settings) {
         if (settings.name == '/album_details_screen') {
-          final album = settings.arguments as Album;
+          final (Album album, SourcePhotos source) =
+              settings.arguments as (Album, SourcePhotos);
           return MaterialPageRoute(
-            builder: (_) => AlbumDetailsScreen(album: album),
+            builder: (_) => AlbumDetailsScreen(album: album, source: source),
           );
         }
         return MaterialPageRoute(
@@ -349,7 +356,7 @@ class _ScaffoldWithNavigationState extends State<ScaffoldWithNavigation> {
           index: _currentIndex,
           children: [
             // Onglet 0 — Albums
-            _onglet(0, const MyList()),
+            _onglet(0, const OngletAlbums()),
             // Onglet 1 — Mes Favoris
             _onglet(1, const FavorisScreen()),
             // Onglet 2 — Club

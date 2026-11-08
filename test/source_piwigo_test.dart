@@ -51,12 +51,12 @@ void main() {
       final ImageWpInfo couverture = albums.last.photoCouverture!;
       expect(couverture.mediaId, isNull);
       expect(couverture.thumbnailUrl,
-          'https://alain.spiphoto.fr/i.php?/upload/2025/12/01/20251201120040-6fddf10f-xs.jpg');
+          'https://alain.spiphoto.fr/i.php?/upload/2025/12/01/20251201120040-6fddf10f-me.jpg');
       expect(couverture.ecranUrl,
-          'https://alain.spiphoto.fr/i.php?/upload/2025/12/01/20251201120040-6fddf10f-xl.jpg');
+          'https://alain.spiphoto.fr/i.php?/upload/2025/12/01/20251201120040-6fddf10f-la.jpg');
       // Vignette déjà en cache (_data/i) : repassée par i.php.
       expect(albums.first.photoCouverture!.thumbnailUrl,
-          'https://alain.spiphoto.fr/i.php?/upload/2025/12/29/20251229150916-3d11c6e7-xs.jpg');
+          'https://alain.spiphoto.fr/i.php?/upload/2025/12/29/20251229150916-3d11c6e7-me.jpg');
     });
 
     test('catégorie sans photo propre ou réponse invalide', () {

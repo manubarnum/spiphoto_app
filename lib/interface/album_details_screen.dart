@@ -1,17 +1,52 @@
 import 'package:flutter/material.dart';
 import 'package:spiphoto_app/spi_colors.dart';
 import 'package:spiphoto_app/service/sources/modeles.dart';
+import 'package:spiphoto_app/service/sources/source_photos.dart';
 import 'package:spiphoto_app/service/image_wp_info.dart';
 import 'package:spiphoto_app/interface/build_grid_view.dart';
 
-class AlbumDetailsScreen extends StatelessWidget {
+/// Photos d'un album. Les sources qui ne donnent pas les photos avec la
+/// liste des albums (galeries Piwigo, Lychee) les chargent à l'ouverture.
+class AlbumDetailsScreen extends StatefulWidget {
   final Album album;
+  final SourcePhotos source;
 
-  const AlbumDetailsScreen({Key? key, required this.album}) : super(key: key);
+  const AlbumDetailsScreen(
+      {super.key, required this.album, required this.source});
+
+  @override
+  State<AlbumDetailsScreen> createState() => _AlbumDetailsScreenState();
+}
+
+class _AlbumDetailsScreenState extends State<AlbumDetailsScreen> {
+  List<ImageWpInfo>? _photos;
+  bool _erreur = false;
+
+  Album get album => widget.album;
+
+  @override
+  void initState() {
+    super.initState();
+    if (album.images.isNotEmpty) {
+      _photos = album.images;
+    } else {
+      _charger();
+    }
+  }
+
+  Future<void> _charger() async {
+    setState(() => _erreur = false);
+    try {
+      final List<ImageWpInfo> photos = await widget.source.photos(album);
+      if (mounted) setState(() => _photos = photos);
+    } catch (_) {
+      if (mounted) setState(() => _erreur = true);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final List<ImageWpInfo> imageInfos = album.images;
+    final List<ImageWpInfo>? imageInfos = _photos;
 
     return Scaffold(
       backgroundColor: context.spi.fond,
@@ -55,92 +90,133 @@ class AlbumDetailsScreen extends StatelessWidget {
       ),
 
       // ── Corps ─────────────────────────────────────────────────────────
-      body: imageInfos.isEmpty
-          // Aucune image
-          ? Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.photo_library_outlined,
-                      color: context.spi.encreSecondaire, size: 48),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Aucune image dans cet album',
-                    style: Theme.of(context).textTheme.bodyMedium,
-                  ),
-                ],
+      body: _erreur
+          ? _EtatAlbum(
+              icone: Icons.wifi_off,
+              message: 'Impossible de charger les photos',
+              action: TextButton.icon(
+                onPressed: _charger,
+                icon: Icon(Icons.refresh, color: context.spi.mauve),
+                label: Text('Réessayer',
+                    style: TextStyle(color: context.spi.mauve)),
               ),
             )
-          // Grille de photos
-          : CustomScrollView(
-              slivers: [
-                // En-tête : titre + nombre de photos
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 20, 16, 4),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.baseline,
-                      textBaseline: TextBaseline.alphabetic,
-                      children: [
-                        // Auteur à la suite du titre, sur la même ligne
-                        // de base, en métadonnée discrète.
-                        Expanded(
-                          child: Text.rich(
-                            TextSpan(
-                              text: album.title,
+          : imageInfos == null
+              ? const Center(child: CircularProgressIndicator())
+              : imageInfos.isEmpty
+                  // Aucune image
+                  ? Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.photo_library_outlined,
+                              color: context.spi.encreSecondaire, size: 48),
+                          const SizedBox(height: 16),
+                          Text(
+                            'Aucune image dans cet album',
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
+                        ],
+                      ),
+                    )
+                  // Grille de photos
+                  : CustomScrollView(
+                      slivers: [
+                        // En-tête : titre + nombre de photos
+                        SliverToBoxAdapter(
+                          child: Padding(
+                            padding: const EdgeInsets.fromLTRB(16, 20, 16, 4),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.baseline,
+                              textBaseline: TextBaseline.alphabetic,
                               children: [
-                                if (album.authorName != null)
-                                  TextSpan(
-                                    text: '  par ${album.authorName}',
-                                    style: TextStyle(
-                                      color: context.spi.encreSecondaire,
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w400,
-                                      letterSpacing: 0.4,
+                                // Auteur à la suite du titre, sur la même ligne
+                                // de base, en métadonnée discrète.
+                                Expanded(
+                                  child: Text.rich(
+                                    TextSpan(
+                                      text: album.title,
+                                      children: [
+                                        if (album.authorName != null)
+                                          TextSpan(
+                                            text: '  par ${album.authorName}',
+                                            style: TextStyle(
+                                              color:
+                                                  context.spi.encreSecondaire,
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w400,
+                                              letterSpacing: 0.4,
+                                            ),
+                                          ),
+                                      ],
                                     ),
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .headlineSmall,
                                   ),
+                                ),
+                                const SizedBox(width: 12),
+                                Text(
+                                  imageInfos.length > 1
+                                      ? '${imageInfos.length} photos'
+                                      : '${imageInfos.length} photo',
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodySmall
+                                      ?.copyWith(
+                                        color: context.spi.accent,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                ),
                               ],
                             ),
-                            style: Theme.of(context).textTheme.headlineSmall,
                           ),
                         ),
-                        const SizedBox(width: 12),
-                        Text(
-                          imageInfos.length > 1
-                              ? '${imageInfos.length} photos'
-                              : '${imageInfos.length} photo',
-                          style:
-                              Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: context.spi.accent,
-                                    fontWeight: FontWeight.w600,
-                                  ),
+
+                        // Filet séparateur
+                        SliverToBoxAdapter(
+                          child: Container(
+                            margin: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                            height: 1,
+                            color: SpiColors.olive.withValues(alpha: 0.3),
+                          ),
+                        ),
+
+                        // Grille
+                        SliverPadding(
+                          padding: const EdgeInsets.fromLTRB(15, 0, 15, 24),
+                          sliver: buildSliverGridView(
+                            context,
+                            imageInfos,
+                            legende: album.title,
+                            auteur: album.authorName,
+                          ),
                         ),
                       ],
                     ),
-                  ),
-                ),
+    );
+  }
+}
 
-                // Filet séparateur
-                SliverToBoxAdapter(
-                  child: Container(
-                    margin: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-                    height: 1,
-                    color: SpiColors.olive.withValues(alpha: 0.3),
-                  ),
-                ),
+class _EtatAlbum extends StatelessWidget {
+  final IconData icone;
+  final String message;
+  final Widget? action;
 
-                // Grille
-                SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(15, 0, 15, 24),
-                  sliver: buildSliverGridView(
-                    context,
-                    imageInfos,
-                    legende: album.title,
-                    auteur: album.authorName,
-                  ),
-                ),
-              ],
-            ),
+  const _EtatAlbum({required this.icone, required this.message, this.action});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icone, color: context.spi.encreSecondaire, size: 48),
+          const SizedBox(height: 16),
+          Text(message, style: Theme.of(context).textTheme.bodyMedium),
+          if (action != null) ...[const SizedBox(height: 12), action!],
+        ],
+      ),
     );
   }
 }
