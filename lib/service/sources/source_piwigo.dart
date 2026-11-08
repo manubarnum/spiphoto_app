@@ -10,9 +10,6 @@ class SourcePiwigo extends SourcePhotos {
   @override
   final SourceConfig config;
 
-  /// Albums par page, comme l'API WordPress de spiphoto.fr.
-  static const int albumsParPage = 10;
-
   /// Photos demandées par appel à `pwg.categories.getImages`.
   static const int photosParAppel = 100;
 
@@ -122,19 +119,6 @@ class SourcePiwigo extends SourcePhotos {
               ),
       );
     }).toList();
-  }
-
-  /// Page [page] (à partir de 1) d'une liste d'albums complète.
-  static PageAlbums pageDepuisListe(List<Album> albums, int page) {
-    final int debut = (page - 1) * albumsParPage;
-    return PageAlbums(
-      albums: debut >= albums.length
-          ? const []
-          : albums.sublist(
-              debut, (debut + albumsParPage).clamp(0, albums.length)),
-      total: albums.length,
-      totalPages: (albums.length / albumsParPage).ceil(),
-    );
   }
 
   /// Photos de `pwg.categories.getImages`.
