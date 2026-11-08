@@ -66,7 +66,8 @@ lib/
     │   ├── source_photos.dart         # Interface commune des sources de photos
     │   ├── source_lychee.dart         # Galeries Lychee 6+ (api/v2, session visiteur)
     │   ├── source_piwigo.dart         # Galeries Piwigo (ws.php, accès invité)
-    │   └── source_spiphoto.dart       # Albums de spiphoto.fr (API WordPress, cache 1re page)
+    │   ├── source_spiphoto.dart       # Albums de spiphoto.fr (API WordPress, cache 1re page)
+    │   └── sources_service.dart       # Sources choisies, liste des galeries d'adhérents
     ├── agenda_service.dart            # Calendrier du club (iCal : récurrences, dates exclues)
     ├── image_wp_info.dart             # Modèle ImageWpInfo
     ├── auth_service.dart              # Connexion Google / Firebase Auth
@@ -83,6 +84,7 @@ test/
 ├── image_wp_info_test.dart            # Modèle des images WordPress
 ├── sources_test.dart                  # Sources de photos (modèles, spiphoto.fr)
 ├── source_lychee_test.dart            # Source Lychee (réponses réelles dans fixtures/)
+├── sources_service_test.dart          # Sources choisies et galeries d'adhérents
 ├── source_piwigo_test.dart            # Source Piwigo (réponses réelles dans fixtures/)
 ├── fixtures/                          # Réponses JSON publiques des galeries
 └── theme_service_test.dart            # Mode jour / nuit
