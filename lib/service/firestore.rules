@@ -8,15 +8,31 @@ service cloud.firestore {
     }
 
     // Un événement favori par paire {uid}_{mediaId}
+    // L'événement et le compteur de sa fiche photoStats bougent ensemble,
+    // dans le même lot d'écritures : créer l'événement exige +1 sur le
+    // compteur, le supprimer exige -1.
     match /favoriteEvents/{eventId} {
+      function fiche(mediaId) {
+        return /databases/$(database)/documents/photoStats/$(string(mediaId));
+      }
+
       allow read: if isSpiphotoUser();
 
       allow create: if isSpiphotoUser()
         && request.resource.data.userId == request.auth.uid
-        && eventId == request.auth.uid + '_' + string(request.resource.data.mediaId);
+        && eventId == request.auth.uid + '_' + string(request.resource.data.mediaId)
+        && (
+          (!exists(fiche(request.resource.data.mediaId))
+            && getAfter(fiche(request.resource.data.mediaId)).data.favoriteCount == 1) ||
+          (exists(fiche(request.resource.data.mediaId))
+            && getAfter(fiche(request.resource.data.mediaId)).data.favoriteCount
+               == get(fiche(request.resource.data.mediaId)).data.favoriteCount + 1)
+        );
 
       allow delete: if isSpiphotoUser()
-        && resource.data.userId == request.auth.uid;
+        && resource.data.userId == request.auth.uid
+        && getAfter(fiche(resource.data.mediaId)).data.favoriteCount
+           == get(fiche(resource.data.mediaId)).data.favoriteCount - 1;
 
       allow update: if false; // jamais de modif, seulement create/delete
     }
@@ -31,10 +47,16 @@ service cloud.firestore {
           'membres']);
       }
 
+      // Événement favori du membre connecté pour cette photo.
+      function evenement() {
+        return /databases/$(database)/documents/favoriteEvents/$(request.auth.uid + '_' + mediaId);
+      }
+
       allow read: if isSpiphotoUser();
 
       allow create: if isSpiphotoUser()
         && request.resource.data.favoriteCount == 1
+        && !exists(evenement()) && existsAfter(evenement())
         && champsConnus()
         && request.resource.data.get('membres', {}).keys()
           .hasOnly([request.auth.uid]);
@@ -42,8 +64,12 @@ service cloud.firestore {
       allow update: if isSpiphotoUser()
         && request.resource.data.favoriteCount >= 0
         && (
-          request.resource.data.favoriteCount == resource.data.favoriteCount + 1 ||
-          request.resource.data.favoriteCount == resource.data.favoriteCount - 1
+          // +1 : l'événement du membre est créé dans ce lot
+          (request.resource.data.favoriteCount == resource.data.favoriteCount + 1
+            && !exists(evenement()) && existsAfter(evenement())) ||
+          // -1 : l'événement du membre est supprimé dans ce lot
+          (request.resource.data.favoriteCount == resource.data.favoriteCount - 1
+            && exists(evenement()) && !existsAfter(evenement()))
         )
         && champsConnus()
         && request.resource.data.get('membres', {})
