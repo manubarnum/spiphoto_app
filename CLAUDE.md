@@ -15,6 +15,7 @@ flutter analyze                               # lints (flutter_lints, voir analy
 flutter test                                  # tous les tests
 flutter test test/agenda_service_test.dart    # un fichier
 flutter test --plain-name 'favoriClubDepuisFiche sans membres'   # un test précis
+cd firestore_test && npm install && npm test  # règles Firestore dans l'émulateur (Node + Java)
 flutter build appbundle --release             # AAB Play Store (exige android/key.properties, non versionné)
 flutter build apk --split-per-abi
 ```
@@ -39,7 +40,7 @@ Séparation stricte : `lib/service/` ne contient aucun code d'interface (pas de 
 - `favoriteEvents/{uid}_{mediaId}` : un document par favori.
 - `photoStats/{mediaId}` : fiche partagée (compteur `favoriteCount`, `lastAddedAt`, `membres.{uid}` avec nom/photo/date) qui alimente le fil du Club sans relire les événements.
 - Les URL sont stockées en **chemins relatifs** à `/wp-content/uploads/` (`photoPath`, `vignettePath`, `ecranPath`, via `cheminMedia`/`urlMedia`) pour fonctionner avec le site local comme en production.
-- Ajout/retrait = un seul `WriteBatch` sans lecture préalable ; l'idempotence repose sur les règles Firestore (recréer ou supprimer un événement inexistant fait rejeter tout le lot). Toute modification du modèle doit rester cohérente avec `firestore.rules`.
+- Ajout/retrait = un seul `WriteBatch` sans lecture préalable ; l'idempotence repose sur les règles Firestore (recréer ou supprimer un événement inexistant fait rejeter tout le lot). Toute modification du modèle doit rester cohérente avec `firestore.rules` : le compteur de `photoStats` n'accepte +1/-1 que si l'événement du membre est créé/supprimé dans le même lot. Toute modification des règles se vérifie avec `firestore_test/` (scénarios à compléter) avant publication dans la console ; le site (`assets/favoris.js` de l'extension) écrit les mêmes lots que l'appli.
 - Un seul abonnement Firestore aux favoris, partagé par tous les écrans, fermé au changement de compte.
 - En cas d'écart, le code et `firestore.rules` font foi sur le README.
 
