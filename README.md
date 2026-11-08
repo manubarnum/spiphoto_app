@@ -103,7 +103,7 @@ assets/
 
 ## 📲 Téléchargement
 
-> 🧪 **Version 1.6.0 (refonte du design) en test interne sur le Play Store.** Une publication publique est prévue ensuite, sous un nouveau nom choisi avec les adhérents.
+> 🧪 **Version 1.7.0 (galeries des adhérents, après la refonte du design de la 1.6.0) en test interne sur le Play Store.** Une publication publique est prévue ensuite, sous un nouveau nom choisi avec les adhérents.
 
 | Public | Lien |
 |---|---|
