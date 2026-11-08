@@ -11,7 +11,7 @@ import 'package:spiphoto_app/interface/album_list.dart';
 import 'package:spiphoto_app/interface/album_details_screen.dart';
 import 'package:spiphoto_app/interface/favoris_screen.dart';
 import 'package:spiphoto_app/interface/club_screen.dart';
-import 'package:spiphoto_app/service/acces_wordpress.dart';
+import 'package:spiphoto_app/service/sources/modeles.dart';
 import 'package:spiphoto_app/service/auth_service.dart';
 import 'package:spiphoto_app/service/theme_service.dart';
 

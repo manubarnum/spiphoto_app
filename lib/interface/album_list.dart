@@ -1,13 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:extended_image/extended_image.dart';
 import 'package:spiphoto_app/spi_colors.dart';
-import 'package:spiphoto_app/service/acces_wordpress.dart';
+import 'package:spiphoto_app/service/sources/modeles.dart';
+import 'package:spiphoto_app/service/sources/source_photos.dart';
+import 'package:spiphoto_app/service/sources/source_spiphoto.dart';
 import 'package:spiphoto_app/service/image_wp_info.dart';
 
 /// Écran d'accueil en mosaïque : l'album le plus récent en photo à la une,
 /// puis les autres albums par paires dans une grille de deux colonnes.
 class MyList extends StatefulWidget {
-  const MyList({super.key});
+  final SourcePhotos source;
+
+  const MyList({super.key, this.source = const SourceSpiphoto()});
 
   @override
   _MyListState createState() => _MyListState();
@@ -15,7 +19,7 @@ class MyList extends StatefulWidget {
 
 class _MyListState extends State<MyList> {
   final List<Album> _albums = [];
-  final Set<int> _idsAlbums = {};
+  final Set<String> _idsAlbums = {};
 
   int _total = 0;
   int _pageSuivante = 1;
@@ -47,7 +51,7 @@ class _MyListState extends State<MyList> {
   /// réseau, hors ligne, la laisse alors affichée au lieu de l'écran
   /// d'erreur.
   Future<void> _demarrer() async {
-    final PageAlbums? page = await premierePageEnregistree();
+    final PageAlbums? page = await widget.source.premierePageEnregistree();
     if (!mounted) return;
     if (page != null) {
       setState(() {
@@ -66,7 +70,7 @@ class _MyListState extends State<MyList> {
     final int generation = ++_generation;
     _premierePageEnCours = true;
     try {
-      final PageAlbums page = await fetchAlbums();
+      final PageAlbums page = await widget.source.albums();
       if (!mounted || generation != _generation) return;
       setState(() {
         _albums.clear();
@@ -104,7 +108,7 @@ class _MyListState extends State<MyList> {
     final int generation = _generation;
     setState(() => _chargementSuite = true);
     try {
-      final PageAlbums page = await fetchAlbums(page: _pageSuivante);
+      final PageAlbums page = await widget.source.albums(page: _pageSuivante);
       if (!mounted || generation != _generation) return;
       setState(() => _ajouter(page));
     } catch (_) {
@@ -306,10 +310,10 @@ class _PhotoALaUne extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final List<ImageWpInfo> photos = album.images;
+    final ImageWpInfo? photo = album.photoCouverture;
     final List<String> meta = [
       if (album.authorName != null) 'Album de ${album.authorName}',
-      _nbPhotos(photos.length),
+      _nbPhotos(album.nbPhotos),
     ];
 
     return GestureDetector(
@@ -322,10 +326,10 @@ class _PhotoALaUne extends StatelessWidget {
             // ── Photo ──────────────────────────────────────────────
             // Taille écran (la vignette 320 px serait floue en pleine
             // largeur), décodée à la taille d'affichage.
-            if (photos.isNotEmpty)
+            if (photo != null)
               _PhotoReseau(
-                url: photos.first.ecranUrl,
-                urlSecours: photos.first.thumbnailUrl,
+                url: photo.ecranUrl,
+                urlSecours: photo.thumbnailUrl,
                 largeurDecodage: (MediaQuery.sizeOf(context).width *
                         MediaQuery.devicePixelRatioOf(context))
                     .round(),
@@ -475,7 +479,7 @@ class _TuileAlbum extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final List<ImageWpInfo> photos = album.images;
+    final ImageWpInfo? photo = album.photoCouverture;
 
     return GestureDetector(
       onTap: onTap,
@@ -494,10 +498,10 @@ class _TuileAlbum extends StatelessWidget {
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(10.5),
-                child: photos.isNotEmpty
+                child: photo != null
                     ? _PhotoReseau(
-                        url: photos.first.thumbnailUrl,
-                        urlSecours: photos.first.ecranUrl,
+                        url: photo.thumbnailUrl,
+                        urlSecours: photo.ecranUrl,
                       )
                     : const _FondPhoto(),
               ),
@@ -516,7 +520,7 @@ class _TuileAlbum extends StatelessWidget {
             ),
           ),
           Text(
-            _nbPhotos(photos.length),
+            _nbPhotos(album.nbPhotos),
             style: TextStyle(
               color: context.spi.encreSecondaire,
               fontSize: 11,

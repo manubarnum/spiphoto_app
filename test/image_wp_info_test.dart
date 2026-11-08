@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:spiphoto_app/service/acces_wordpress.dart';
+import 'package:spiphoto_app/service/sources/modeles.dart';
+import 'package:spiphoto_app/service/sources/source_spiphoto.dart';
 import 'package:spiphoto_app/service/image_wp_info.dart';
 
 void main() {
@@ -26,8 +27,8 @@ void main() {
     });
   });
 
-  test('Album.fromJson lit les photos de spi_images, dans l\'ordre', () {
-    final Album album = Album.fromJson({
+  test('albumDepuisJson lit les photos de spi_images, dans l\'ordre', () {
+    final Album album = SourceSpiphoto.albumDepuisJson({
       'id': 1,
       'link': 'https://www.spiphoto.fr/album/',
       'title': {'rendered': 'L&rsquo;album'},
@@ -55,8 +56,8 @@ void main() {
         'L’album\nhttps://www.spiphoto.fr/album/');
   });
 
-  test('Album.fromJson sans spi_images : aucune photo', () {
-    final Album album = Album.fromJson({
+  test('albumDepuisJson sans spi_images : aucune photo', () {
+    final Album album = SourceSpiphoto.albumDepuisJson({
       'id': 2,
       'title': {'rendered': 'Vide'},
     });
