@@ -86,8 +86,8 @@ void main() {
         23, (i) => Album(id: '$i', title: 'A$i', images: const []));
 
     test('pages de 10, dernière page partielle', () {
-      final PageAlbums p1 = SourcePiwigo.pageDepuisListe(albums, 1);
-      final PageAlbums p3 = SourcePiwigo.pageDepuisListe(albums, 3);
+      final PageAlbums p1 = pageDepuisListe(albums, 1);
+      final PageAlbums p3 = pageDepuisListe(albums, 3);
       expect(p1.albums.map((a) => a.id).first, '0');
       expect(p1.albums, hasLength(10));
       expect(p3.albums.map((a) => a.id), ['20', '21', '22']);
@@ -96,8 +96,8 @@ void main() {
     });
 
     test('au-delà de la fin : page vide', () {
-      expect(SourcePiwigo.pageDepuisListe(albums, 4).albums, isEmpty);
-      expect(SourcePiwigo.pageDepuisListe(const [], 1).totalPages, 0);
+      expect(pageDepuisListe(albums, 4).albums, isEmpty);
+      expect(pageDepuisListe(const [], 1).totalPages, 0);
     });
   });
 

@@ -21,6 +21,23 @@ Uri racineSource(Uri adresse) {
   );
 }
 
+/// Albums par page pour les sources qui donnent tous leurs albums d'un coup
+/// (pagination côté appli), comme l'API WordPress de spiphoto.fr.
+const int albumsParPage = 10;
+
+/// Page [page] (à partir de 1) d'une liste d'albums complète.
+PageAlbums pageDepuisListe(List<Album> albums, int page) {
+  final int debut = (page - 1) * albumsParPage;
+  return PageAlbums(
+    albums: debut >= albums.length || debut < 0
+        ? const []
+        : albums.sublist(
+            debut, (debut + albumsParPage).clamp(0, albums.length)),
+    total: albums.length,
+    totalPages: (albums.length / albumsParPage).ceil(),
+  );
+}
+
 /// Ce que toute source de photos (spiphoto.fr, Piwigo, Lychee, WordPress)
 /// sait fournir à l'interface.
 abstract class SourcePhotos {
