@@ -61,7 +61,10 @@ lib/
 │   ├── compte_sheet.dart              # Panneau « Mon compte »
 │   └── connexion_requise.dart         # Invitation à se connecter
 └── service/
-    ├── acces_wordpress.dart           # API WordPress (pagination) + modèle Album
+    ├── sources/
+    │   ├── modeles.dart               # Album, PageAlbums, SourceConfig, Categorie
+    │   ├── source_photos.dart         # Interface commune des sources de photos
+    │   └── source_spiphoto.dart       # Albums de spiphoto.fr (API WordPress, cache 1re page)
     ├── agenda_service.dart            # Calendrier du club (iCal : récurrences, dates exclues)
     ├── image_wp_info.dart             # Modèle ImageWpInfo
     ├── auth_service.dart              # Connexion Google / Firebase Auth
@@ -177,7 +180,7 @@ git push origin v1.6.0+4
 
 ### WordPress
 
-L'URL de l'API est définie dans `lib/service/acces_wordpress.dart`. Les albums sont chargés par pages de 10, avec le nom de l'auteur, en ne demandant que les champs utiles :
+L'URL de l'API est définie dans `lib/service/sources/source_spiphoto.dart`. Les albums sont chargés par pages de 10, avec le nom de l'auteur, en ne demandant que les champs utiles :
 
 ```dart
 'https://www.spiphoto.fr/wp-json/wp/v2/posts?_embed=author'
