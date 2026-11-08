@@ -79,7 +79,10 @@ test/
 ├── agenda_service_test.dart           # Lecture du calendrier iCal
 ├── favorites_service_test.dart        # Favoris et fiches du Club
 ├── image_wp_info_test.dart            # Modèle des images WordPress
+├── sources_test.dart                  # Sources de photos (modèles, spiphoto.fr)
 └── theme_service_test.dart            # Mode jour / nuit
+
+firestore_test/                        # Règles Firestore testées dans l'émulateur (Node)
 
 assets/
 └── icons/
@@ -194,7 +197,8 @@ L'URL de l'API est définie dans `lib/service/sources/source_spiphoto.dart`. Les
 
 - `android/app/google-services.json` contient la configuration du projet Firebase.
 - La connexion est limitée au domaine **@spiphoto.fr** (`lib/service/auth_service.dart`).
-- Les règles de sécurité Firestore sont gardées pour référence dans `lib/service/firestore.rules` ; elles se déploient depuis la console Firebase.
+- Les règles de sécurité Firestore sont gardées pour référence dans `lib/service/firestore.rules` ; elles se déploient depuis la console Firebase. Le compteur `favoriteCount` d'une fiche ne bouge qu'avec la création ou la suppression de l'événement du membre dans le même lot.
+- Avant de les publier, les vérifier dans l'émulateur (Node et Java requis) : `cd firestore_test && npm install && npm test`. Les scénarios (ajout, retrait, idempotence, écritures directes refusées) reprennent les lots d'écritures de l'appli et du site.
 - Collections utilisées :
 
 | Collection | Contenu |
