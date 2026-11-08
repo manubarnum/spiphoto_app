@@ -88,7 +88,7 @@ class Album {
   /// Photo de couverture fournie par la source, à défaut la 1re photo.
   final ImageWpInfo? couverture;
 
-  /// Nombre de photos annoncé par la source, à défaut celui de [images].
+  /// Nombre de photos annoncé par la source (null s'il est inconnu).
   final int? nbPhotosAnnonce;
 
   Album({
@@ -105,7 +105,8 @@ class Album {
   ImageWpInfo? get photoCouverture =>
       couverture ?? (images.isNotEmpty ? images.first : null);
 
-  int get nbPhotos => images.isNotEmpty ? images.length : nbPhotosAnnonce ?? 0;
+  /// Nombre de photos, ou null s'il n'est pas connu avant l'ouverture.
+  int? get nbPhotos => images.isNotEmpty ? images.length : nbPhotosAnnonce;
 }
 
 /// Une page d'albums et les totaux de la source.

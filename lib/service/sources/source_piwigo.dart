@@ -112,9 +112,11 @@ class SourcePiwigo extends SourcePhotos {
             ? null
             : ImageWpInfo(
                 mediaId: null,
-                thumbnailUrl: derivee(vignette, 'xs'),
-                ecranUrl: derivee(vignette, 'xl'),
-                landscapeUrl: derivee(vignette, 'xl'),
+                // `me` (medium) est toujours active ; `la` (large) peut être
+                // désactivée : l'affichage retombe alors sur la vignette.
+                thumbnailUrl: derivee(vignette, 'me'),
+                ecranUrl: derivee(vignette, 'la'),
+                landscapeUrl: derivee(vignette, 'me'),
                 description: titre,
               ),
       );
@@ -171,8 +173,9 @@ class SourcePiwigo extends SourcePhotos {
   ];
 
   /// Autre taille d'une image Piwigo à partir de sa vignette (`-th`) :
-  /// `i.php` produit à la demande la dérivée voulue (`xs`, `xl`…). Une
-  /// adresse d'une autre forme est rendue telle quelle.
+  /// `i.php` produit à la demande la dérivée voulue (`me`, `la`…), à
+  /// condition qu'elle soit activée dans la galerie (sinon réponse 400).
+  /// Une adresse d'une autre forme est rendue telle quelle.
   static String derivee(String vignette, String suffixe) {
     final RegExp th = RegExp(r'-th(\.[A-Za-z]+)$');
     if (!th.hasMatch(vignette)) return vignette;

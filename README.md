@@ -8,6 +8,7 @@ Application mobile du club photo **SPIPHOTO**, développée avec Flutter. Elle p
 
 - 🏠 **Accueil mosaïque** — l'album le plus récent en photo à la une, puis tous les albums par paires, chargés au fil du défilement
 - 🖼️ **Albums** — grille de photos (2 colonnes en portrait, 4 en paysage), titre, auteur et nombre de photos
+- 🗂️ **Sources de photos** — en plus des albums de spiphoto.fr (filtrables par catégorie), les galeries Piwigo et Lychee des adhérents, à activer depuis l'écran « Sources de photos » ; la liste vient du site du club. Pas de favoris sur ces galeries
 - 🔍 **Visionneuse plein écran** — swipe entre les photos, zoom (pinch-to-zoom), barre d'actions fond d'écran / favori / partage
 - 🖥️ **Fond d'écran avec aperçu** — choix de l'écran (accueil, verrouillage ou les deux), recadrage (zoom et déplacement) dans une maquette aux proportions du téléphone, puis pose
 - ❤️ **Mes favoris** — les photos mises en favori, de la plus récente à la plus ancienne, synchronisées en temps réel
@@ -48,8 +49,10 @@ lib/
 ├── interface/
 │   ├── appbar_accueil.dart            # Barre d'app : logo (retour accueil), site, jour / nuit, compte
 │   ├── bottom_nav.dart                # Nav basse : Albums · Mes favoris · Club
+│   ├── onglet_albums.dart             # Onglet Albums : choix de la source, catégories
 │   ├── album_list.dart                # Accueil mosaïque (photo à la une + albums)
-│   ├── album_details_screen.dart      # Écran d'un album
+│   ├── sources_screen.dart            # Sources de photos (galeries des adhérents)
+│   ├── album_details_screen.dart      # Écran d'un album (photos chargées à l'ouverture si besoin)
 │   ├── build_grid_view.dart           # Grille de photos
 │   ├── build_page_view.dart           # Visionneuse plein écran
 │   ├── wallpaper_preview_screen.dart  # Aperçu et pose du fond d'écran

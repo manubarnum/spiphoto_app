@@ -11,7 +11,18 @@ import 'package:spiphoto_app/service/image_wp_info.dart';
 class MyList extends StatefulWidget {
   final SourcePhotos source;
 
-  const MyList({super.key, this.source = const SourceSpiphoto()});
+  /// Catégorie filtrée (null : tous les albums).
+  final String? categorieId;
+
+  /// Titre de la section sous la photo à la une.
+  final String titreSection;
+
+  const MyList({
+    super.key,
+    this.source = const SourceSpiphoto(),
+    this.categorieId,
+    this.titreSection = 'Tous les albums',
+  });
 
   @override
   _MyListState createState() => _MyListState();
@@ -51,7 +62,10 @@ class _MyListState extends State<MyList> {
   /// réseau, hors ligne, la laisse alors affichée au lieu de l'écran
   /// d'erreur.
   Future<void> _demarrer() async {
-    final PageAlbums? page = await widget.source.premierePageEnregistree();
+    // La copie locale ne vaut que pour la liste complète.
+    final PageAlbums? page = widget.categorieId == null
+        ? await widget.source.premierePageEnregistree()
+        : null;
     if (!mounted) return;
     if (page != null) {
       setState(() {
@@ -70,7 +84,8 @@ class _MyListState extends State<MyList> {
     final int generation = ++_generation;
     _premierePageEnCours = true;
     try {
-      final PageAlbums page = await widget.source.albums();
+      final PageAlbums page =
+          await widget.source.albums(categorieId: widget.categorieId);
       if (!mounted || generation != _generation) return;
       setState(() {
         _albums.clear();
@@ -108,7 +123,8 @@ class _MyListState extends State<MyList> {
     final int generation = _generation;
     setState(() => _chargementSuite = true);
     try {
-      final PageAlbums page = await widget.source.albums(page: _pageSuivante);
+      final PageAlbums page = await widget.source
+          .albums(page: _pageSuivante, categorieId: widget.categorieId);
       if (!mounted || generation != _generation) return;
       setState(() => _ajouter(page));
     } catch (_) {
@@ -148,7 +164,8 @@ class _MyListState extends State<MyList> {
 
   // Navigateur de l'onglet : l'album s'ouvre sous la nav basse.
   void _ouvrirAlbum(Album album) {
-    Navigator.pushNamed(context, '/album_details_screen', arguments: album);
+    Navigator.pushNamed(context, '/album_details_screen',
+        arguments: (album, widget.source));
   }
 
   @override
@@ -219,7 +236,8 @@ class _MyListState extends State<MyList> {
               ),
             ),
             SliverToBoxAdapter(
-              child: _EnteteSection(nbAlbums: _total),
+              child:
+                  _EnteteSection(titre: widget.titreSection, nbAlbums: _total),
             ),
             // Une rangée = une paire d'albums. Des Row plutôt qu'une
             // SliverGrid : la hauteur des légendes sous les tuiles varie
@@ -294,7 +312,9 @@ class _MyListState extends State<MyList> {
   }
 }
 
-String _nbPhotos(int n) => n > 1 ? '$n photos' : '$n photo';
+/// « 12 photos », ou null si le nombre n'est pas connu avant l'ouverture.
+String? _nbPhotos(int? n) =>
+    n == null ? null : (n > 1 ? '$n photos' : '$n photo');
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PHOTO À LA UNE — album le plus récent, pleine largeur
@@ -313,7 +333,7 @@ class _PhotoALaUne extends StatelessWidget {
     final ImageWpInfo? photo = album.photoCouverture;
     final List<String> meta = [
       if (album.authorName != null) 'Album de ${album.authorName}',
-      _nbPhotos(album.nbPhotos),
+      if (_nbPhotos(album.nbPhotos) case final String nb) nb,
     ];
 
     return GestureDetector(
@@ -419,9 +439,10 @@ class _PhotoALaUne extends StatelessWidget {
 // ENTÊTE DE SECTION — « TOUS LES ALBUMS » + compteur, puis filet
 // ─────────────────────────────────────────────────────────────────────────────
 class _EnteteSection extends StatelessWidget {
+  final String titre;
   final int nbAlbums;
 
-  const _EnteteSection({required this.nbAlbums});
+  const _EnteteSection({required this.titre, required this.nbAlbums});
 
   @override
   Widget build(BuildContext context) {
@@ -434,15 +455,20 @@ class _EnteteSection extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.baseline,
             textBaseline: TextBaseline.alphabetic,
             children: [
-              Text(
-                'TOUS LES ALBUMS',
-                style: TextStyle(
-                  color: context.spi.encre,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 2.4,
+              Flexible(
+                child: Text(
+                  titre.toUpperCase(),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: context.spi.encre,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 2.4,
+                  ),
                 ),
               ),
+              const SizedBox(width: 12),
               Text(
                 '$nbAlbums',
                 style: TextStyle(
@@ -519,13 +545,14 @@ class _TuileAlbum extends StatelessWidget {
               letterSpacing: 0.9,
             ),
           ),
-          Text(
-            _nbPhotos(album.nbPhotos),
-            style: TextStyle(
-              color: context.spi.encreSecondaire,
-              fontSize: 11,
+          if (_nbPhotos(album.nbPhotos) case final String nb)
+            Text(
+              nb,
+              style: TextStyle(
+                color: context.spi.encreSecondaire,
+                fontSize: 11,
+              ),
             ),
-          ),
         ],
       ),
     );

@@ -75,7 +75,7 @@ void main() {
     test('sans photo ni couverture', () {
       final Album album = Album(id: 'v', title: 'Vide', images: const []);
       expect(album.photoCouverture, isNull);
-      expect(album.nbPhotos, 0);
+      expect(album.nbPhotos, isNull);
     });
   });
 
